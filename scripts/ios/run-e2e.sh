@@ -56,6 +56,23 @@ xcrun simctl boot "$device_id" 2>/dev/null || true
 xcrun simctl bootstatus "$device_id" -b
 xcrun simctl install "$device_id" "$app_path"
 
+# Fresh GitHub-hosted simulators can take several minutes to finish bringing up
+# XCTest after simctl reports that booting and data migration are complete.
+export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
+maestro_log="$(mktemp)"
+
+# Run the acceptance flow once before recording. This proves the simulator and
+# XCTest driver are ready, so the public demo contains the story rather than a
+# multi-minute hosted-runner startup screen.
+if maestro --device "$device_id" test .maestro/smoke.yaml 2>&1 | tee "$maestro_log"; then
+  :
+elif grep -Fq 'iOS driver not ready in time' "$maestro_log"; then
+  echo "Maestro driver startup failed once; retrying on the booted simulator." >&2
+  maestro --device "$device_id" test .maestro/smoke.yaml
+else
+  exit 1
+fi
+
 xcrun simctl io "$device_id" recordVideo --codec=h264 --force "$video_path" &
 recording_pid=$!
 sleep 2
@@ -66,19 +83,7 @@ if ! kill -0 "$recording_pid" 2>/dev/null; then
   exit 1
 fi
 
-# Fresh GitHub-hosted simulators can take several minutes to finish bringing up
-# XCTest after simctl reports that booting and data migration are complete.
-export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
-maestro_log="$(mktemp)"
-
-if maestro --device "$device_id" test .maestro/smoke.yaml 2>&1 | tee "$maestro_log"; then
-  :
-elif grep -Fq 'iOS driver not ready in time' "$maestro_log"; then
-  echo "Maestro failed once; retrying the acceptance flow on the booted simulator." >&2
-  maestro --device "$device_id" test .maestro/smoke.yaml
-else
-  exit 1
-fi
+maestro --device "$device_id" test .maestro/smoke.yaml
 
 finish_recording
 recording_pid=''
@@ -103,5 +108,11 @@ ffmpeg \
   -y \
   "$compressed_video"
 mv "$compressed_video" "$video_path"
+
+video_size="$(stat -f '%z' "$video_path")"
+if (( video_size >= 1048576 )); then
+  echo "The acceptance recording is too large for Planista: ${video_size} bytes." >&2
+  exit 1
+fi
 
 echo "$video_path"

@@ -41,11 +41,6 @@ jobs:
         run: npm run ios:e2e
       - name: Build unsigned IPA
         run: npm run ios:ipa
-      - name: Upload demo to Planista
-        id: demo
-        run: |
-          demo_url="$(curl --fail-with-body -sS -H 'Content-Type: video/mp4' --data-binary @artifacts/e2e-demo.mp4 https://planista.shloklab.us/)"
-          echo "url=$demo_url" >> "$GITHUB_OUTPUT"
       - name: Upload iOS artifacts
         id: artifact
         uses: actions/upload-artifact@v7
@@ -56,6 +51,11 @@ jobs:
             artifacts/e2e-demo.mp4
           if-no-files-found: error
           retention-days: 14
+      - name: Upload demo to Planista
+        id: demo
+        run: |
+          demo_url="$(curl --fail-with-body -sS --retry 3 --retry-all-errors --retry-delay 2 --connect-timeout 20 --max-time 120 -H 'Content-Type: video/mp4' --data-binary @artifacts/e2e-demo.mp4 https://planista.shloklab.us/)"
+          echo "url=$demo_url" >> "$GITHUB_OUTPUT"
       - name: Update PR preview comment
         uses: actions/github-script@v9
         env:
