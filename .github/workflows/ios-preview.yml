@@ -19,7 +19,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -48,7 +48,7 @@ jobs:
           echo "url=$demo_url" >> "$GITHUB_OUTPUT"
       - name: Upload iOS artifacts
         id: artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-preview-${{ github.event.pull_request.number }}
           path: |
@@ -57,7 +57,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Update PR preview comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           DEMO_URL: ${{ steps.demo.outputs.url }}
           ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
