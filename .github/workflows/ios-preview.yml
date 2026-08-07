@@ -1,0 +1,94 @@
+name: iOS PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ios-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - name: Install Maestro
+        env:
+          MAESTRO_VERSION: 2.8.0
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Install FFmpeg when absent
+        run: command -v ffmpeg >/dev/null || brew install ffmpeg
+      - name: Run and record iOS acceptance test
+        run: npm run ios:e2e
+      - name: Build unsigned IPA
+        run: npm run ios:ipa
+      - name: Upload demo to Planista
+        id: demo
+        run: |
+          demo_url="$(curl --fail-with-body -sS -H 'Content-Type: video/mp4' --data-binary @artifacts/e2e-demo.mp4 https://planista.shloklab.us/)"
+          echo "url=$demo_url" >> "$GITHUB_OUTPUT"
+      - name: Upload iOS artifacts
+        id: artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-preview-${{ github.event.pull_request.number }}
+          path: |
+            artifacts/MB-Music-Tools-unsigned.ipa
+            artifacts/e2e-demo.mp4
+          if-no-files-found: error
+          retention-days: 14
+      - name: Update PR preview comment
+        uses: actions/github-script@v8
+        env:
+          DEMO_URL: ${{ steps.demo.outputs.url }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        with:
+          script: |
+            const marker = '<!-- ios-pr-preview -->';
+            const body = `${marker}
+            ## iOS acceptance preview
+
+            - [Watch the recorded Maestro acceptance flow](${process.env.DEMO_URL})
+            - [Download the unsigned IPA and test artifacts](${process.env.ARTIFACT_URL})
+
+            > The IPA is intentionally unsigned. Sign it with your own Apple development identity or sideloading tool before installing it on a physical iPhone.
+
+            _Built from ${context.sha.slice(0, 7)} by [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})._`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            const previous = comments.find((comment) =>
+              comment.user.type === 'Bot' && comment.body.includes(marker)
+            );
+            const params = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            };
+            if (previous) {
+              await github.rest.issues.updateComment({ ...params, comment_id: previous.id });
+            } else {
+              await github.rest.issues.createComment({ ...params, issue_number: context.issue.number });
+            }

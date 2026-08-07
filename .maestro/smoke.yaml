@@ -1,0 +1,12 @@
+appId: com.marginallybetterapps.musictools
+name: Starter navigation demo
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Welcome to.*Expo"
+    timeout: 15000
+- tapOn: "Explore"
+- assertVisible: "This starter app includes example.*code to help you get started."
+- tapOn: "Home"
+- assertVisible: "Welcome to.*Expo"
