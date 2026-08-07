@@ -66,7 +66,19 @@ if ! kill -0 "$recording_pid" 2>/dev/null; then
   exit 1
 fi
 
-maestro --device "$device_id" test .maestro/smoke.yaml
+# Fresh GitHub-hosted simulators can take several minutes to finish bringing up
+# XCTest after simctl reports that booting and data migration are complete.
+export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
+maestro_log="$(mktemp)"
+
+if maestro --device "$device_id" test .maestro/smoke.yaml 2>&1 | tee "$maestro_log"; then
+  :
+elif grep -Fq 'iOS driver not ready in time' "$maestro_log"; then
+  echo "Maestro failed once; retrying the acceptance flow on the booted simulator." >&2
+  maestro --device "$device_id" test .maestro/smoke.yaml
+else
+  exit 1
+fi
 
 finish_recording
 recording_pid=''
