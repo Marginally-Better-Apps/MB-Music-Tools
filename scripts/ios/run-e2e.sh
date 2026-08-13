@@ -5,22 +5,30 @@ set -euo pipefail
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 artifact_dir="${ARTIFACT_DIR:-$project_root/artifacts}"
 video_path="$artifact_dir/e2e-demo.mp4"
-recording_pid=''
+maestro_output_dir=''
+compressed_video=''
 
-finish_recording() {
-  if [[ -n "$recording_pid" ]]; then
-    kill -INT "$recording_pid" 2>/dev/null || true
-    wait "$recording_pid" 2>/dev/null || true
+cleanup() {
+  if [[ -n "$maestro_output_dir" && "$maestro_output_dir" == "$artifact_dir"/maestro-output.* ]]; then
+    rm -rf -- "$maestro_output_dir"
+  fi
+  if [[ -n "$compressed_video" && "$compressed_video" == "$artifact_dir"/e2e-demo.*.mp4 ]]; then
+    rm -f -- "$compressed_video"
   fi
 }
 
-trap finish_recording EXIT
+trap cleanup EXIT
 
 cd "$project_root"
 mkdir -p "$artifact_dir"
 
 if ! command -v maestro >/dev/null 2>&1; then
   echo "Maestro is required. Install version 2.8.0 from https://docs.maestro.dev/getting-started/installing-maestro" >&2
+  exit 1
+fi
+
+if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+  echo "FFmpeg and FFprobe are required to normalize and validate the acceptance recording." >&2
   exit 1
 fi
 
@@ -59,44 +67,61 @@ xcrun simctl install "$device_id" "$app_path"
 # Fresh GitHub-hosted simulators can take several minutes to finish bringing up
 # XCTest after simctl reports that booting and data migration are complete.
 export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
-maestro_log="$(mktemp)"
+rm -f -- "$video_path"
+maestro_output_dir="$(mktemp -d "$artifact_dir/maestro-output.XXXXXX")"
+maestro_log="$maestro_output_dir/maestro.log"
 
-# Run the acceptance flow once before recording. This proves the simulator and
-# XCTest driver are ready, so the public demo contains the story rather than a
-# multi-minute hosted-runner startup screen.
-if maestro --device "$device_id" test .maestro/smoke.yaml 2>&1 | tee "$maestro_log"; then
+# Recording starts and stops inside the Maestro flow. Driver startup, app reset,
+# and CLI teardown therefore stay outside the public demo.
+if maestro --device "$device_id" test --test-output-dir "$maestro_output_dir" .maestro/smoke.yaml 2>&1 | tee "$maestro_log"; then
   :
 elif grep -Fq 'iOS driver not ready in time' "$maestro_log"; then
   echo "Maestro driver startup failed once; retrying on the booted simulator." >&2
-  maestro --device "$device_id" test .maestro/smoke.yaml
+  cleanup
+  maestro_output_dir="$(mktemp -d "$artifact_dir/maestro-output.XXXXXX")"
+  maestro --device "$device_id" test --test-output-dir "$maestro_output_dir" .maestro/smoke.yaml
 else
   exit 1
 fi
 
-xcrun simctl io "$device_id" recordVideo --codec=h264 --force "$video_path" &
-recording_pid=$!
-sleep 2
-
-if ! kill -0 "$recording_pid" 2>/dev/null; then
-  wait "$recording_pid"
-  echo "The iOS simulator recorder stopped before the acceptance flow began." >&2
+raw_video="$(find "$maestro_output_dir" -type f -name 'e2e-demo-raw*.mp4' -print -quit)"
+if [[ -z "$raw_video" || ! -s "$raw_video" ]]; then
+  echo "Maestro did not produce the bounded acceptance recording." >&2
   exit 1
 fi
 
-maestro --device "$device_id" test .maestro/smoke.yaml
-
-finish_recording
-recording_pid=''
-
-if ! command -v ffmpeg >/dev/null 2>&1; then
-  echo "FFmpeg is required to normalize the acceptance recording for upload." >&2
-  exit 1
+# Maestro's recorder can spend several seconds showing the ready screen while
+# its encoder starts. Detect that initial frozen segment instead of assuming a
+# runner-specific delay, and retain half a second of context before the first tap.
+freeze_log="$maestro_output_dir/freeze.log"
+ffmpeg \
+  -hide_banner \
+  -i "$raw_video" \
+  -vf 'freezedetect=n=0.01:d=2' \
+  -an \
+  -f null \
+  - 2>"$freeze_log" || true
+initial_freeze_end="$(awk '
+  /freeze_start: 0([.]0*)?$/ { starts_at_zero = 1; next }
+  starts_at_zero && /freeze_end:/ { print $NF; exit }
+' "$freeze_log")"
+trim_start="$(awk -v freeze_end="${initial_freeze_end:-0}" 'BEGIN {
+  start = freeze_end - 0.5
+  if (start < 0) start = 0
+  printf "%.3f", start
+}')"
+raw_duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$raw_video")"
+remaining_after_trim="$(awk -v duration="$raw_duration" -v start="$trim_start" 'BEGIN { printf "%.3f", duration - start }')"
+if ! awk -v remaining="$remaining_after_trim" 'BEGIN { exit !(remaining >= 5) }'; then
+  # Quiet empty states look frozen to the detector. Keep the Maestro bounds.
+  trim_start=0
 fi
 
 compressed_video="$(mktemp "$artifact_dir/e2e-demo.XXXXXX.mp4")"
 ffmpeg \
   -v error \
-  -i "$video_path" \
+  -ss "$trim_start" \
+  -i "$raw_video" \
   -vf 'fps=30,scale=440:-2' \
   -c:v libx264 \
   -preset medium \
@@ -108,6 +133,13 @@ ffmpeg \
   -y \
   "$compressed_video"
 mv "$compressed_video" "$video_path"
+compressed_video=''
+
+video_duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$video_path")"
+if ! awk -v duration="$video_duration" 'BEGIN { exit !(duration >= 5 && duration <= 45) }'; then
+  echo "The acceptance recording duration is outside the expected 5-45 second range: ${video_duration}s." >&2
+  exit 1
+fi
 
 video_size="$(stat -f '%z' "$video_path")"
 if (( video_size >= 1048576 )); then

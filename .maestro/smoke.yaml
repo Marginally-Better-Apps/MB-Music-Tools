@@ -1,12 +1,21 @@
 appId: com.marginallybetterapps.musictools
-name: Starter navigation demo
+name: Compact Tuner and Metronome shell
 ---
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: "Welcome to.*Expo"
+    visible: "Play a note when you are ready."
     timeout: 15000
-- tapOn: "Explore"
-- assertVisible: "This starter app includes example.*code to help you get started."
-- tapOn: "Home"
-- assertVisible: "Welcome to.*Expo"
+- assertVisible: "Tuner"
+- startRecording: e2e-demo-raw
+- extendedWaitUntil:
+    visible: "Recording hold"
+    timeout: 2500
+    optional: true
+- tapOn: "Metronome"
+- assertVisible: "Set a tempo when you are ready."
+- extendedWaitUntil:
+    visible: "Recording hold"
+    timeout: 2500
+    optional: true
+- stopRecording
