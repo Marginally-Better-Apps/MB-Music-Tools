@@ -10,12 +10,12 @@ name: Compact Tuner and Metronome shell
 - startRecording: e2e-demo-raw
 - extendedWaitUntil:
     visible: "Recording hold"
-    timeout: 2500
+    timeout: 4000
     optional: true
 - tapOn: "Metronome"
 - assertVisible: "Set a tempo when you are ready."
 - extendedWaitUntil:
     visible: "Recording hold"
-    timeout: 2500
+    timeout: 4000
     optional: true
 - stopRecording
