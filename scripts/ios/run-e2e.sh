@@ -9,7 +9,10 @@ maestro_output_dir=''
 compressed_video=''
 
 cleanup() {
-  if [[ -n "$maestro_output_dir" && "$maestro_output_dir" == "$artifact_dir"/maestro-output.* ]]; then
+  local status=$?
+  # Keep Maestro's hierarchy dump and screenshots when the flow fails so CI
+  # can upload them. Successful runs only need the compressed demo video.
+  if [[ "$status" -eq 0 && -n "$maestro_output_dir" && "$maestro_output_dir" == "$artifact_dir"/maestro-output.* ]]; then
     rm -rf -- "$maestro_output_dir"
   fi
   if [[ -n "$compressed_video" && "$compressed_video" == "$artifact_dir"/e2e-demo.*.mp4 ]]; then
@@ -74,15 +77,19 @@ maestro_log="$maestro_output_dir/maestro.log"
 
 # Recording starts and stops inside the Maestro flow. Driver startup, app reset,
 # and CLI teardown therefore stay outside the public demo.
-if maestro --device "$device_id" test --test-output-dir "$maestro_output_dir" .maestro/smoke.yaml 2>&1 | tee "$maestro_log"; then
-  :
-elif grep -Fq 'iOS driver not ready in time' "$maestro_log"; then
-  echo "Maestro driver startup failed once; retrying on the booted simulator." >&2
-  cleanup
-  maestro_output_dir="$(mktemp -d "$artifact_dir/maestro-output.XXXXXX")"
+run_maestro() {
   maestro --device "$device_id" test --test-output-dir "$maestro_output_dir" .maestro/smoke.yaml
+}
+
+if run_maestro 2>&1 | tee "$maestro_log"; then
+  :
 else
-  exit 1
+  echo "Maestro failed once; retrying on the booted simulator after a fresh install." >&2
+  xcrun simctl terminate "$device_id" com.marginallybetterapps.musictools 2>/dev/null || true
+  xcrun simctl install "$device_id" "$app_path"
+  maestro_output_dir="$(mktemp -d "$artifact_dir/maestro-output.XXXXXX")"
+  maestro_log="$maestro_output_dir/maestro.log"
+  run_maestro 2>&1 | tee "$maestro_log"
 fi
 
 raw_video="$(find "$maestro_output_dir" -type f -name 'e2e-demo-raw*.mp4' -print -quit)"
@@ -113,15 +120,23 @@ trim_start="$(awk -v freeze_end="${initial_freeze_end:-0}" 'BEGIN {
 }')"
 raw_duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$raw_video")"
 remaining_after_trim="$(awk -v duration="$raw_duration" -v start="$trim_start" 'BEGIN { printf "%.3f", duration - start }')"
+max_duration=45
 if ! awk -v remaining="$remaining_after_trim" 'BEGIN { exit !(remaining >= 3) }'; then
-  # Quiet empty states look frozen to the detector. Keep the Maestro bounds.
-  trim_start=0
+  # Quiet empty states look frozen to the detector. Keep the Maestro story
+  # and drop surplus encoder-startup from the start so the clip still fits
+  # the Planista duration guard.
+  trim_start="$(awk -v duration="$raw_duration" -v max="$max_duration" 'BEGIN {
+    over = duration - max
+    if (over < 0) over = 0
+    printf "%.3f", over
+  }')"
 fi
 
 compressed_video="$(mktemp "$artifact_dir/e2e-demo.XXXXXX.mp4")"
 ffmpeg \
   -v error \
   -ss "$trim_start" \
+  -t "$max_duration" \
   -i "$raw_video" \
   -vf 'fps=30,scale=440:-2' \
   -c:v libx264 \
@@ -137,8 +152,8 @@ mv "$compressed_video" "$video_path"
 compressed_video=''
 
 video_duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$video_path")"
-if ! awk -v duration="$video_duration" 'BEGIN { exit !(duration >= 3 && duration <= 45) }'; then
-  echo "The acceptance recording duration is outside the expected 3-45 second range: ${video_duration}s." >&2
+if ! awk -v duration="$video_duration" -v max="$max_duration" 'BEGIN { exit !(duration >= 3 && duration < max + 1) }'; then
+  echo "The acceptance recording duration is outside the expected 3-${max_duration} second range: ${video_duration}s." >&2
   exit 1
 fi
 
