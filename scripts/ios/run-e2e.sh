@@ -76,15 +76,19 @@ maestro_log="$maestro_output_dir/maestro.log"
 
 # Recording starts and stops inside the Maestro flow. Driver startup, app reset,
 # and CLI teardown therefore stay outside the public demo.
-if maestro --device "$device_id" test --test-output-dir "$maestro_output_dir" .maestro/smoke.yaml 2>&1 | tee "$maestro_log"; then
-  :
-elif grep -Fq 'iOS driver not ready in time' "$maestro_log"; then
-  echo "Maestro driver startup failed once; retrying on the booted simulator." >&2
-  cleanup
-  maestro_output_dir="$(mktemp -d "$artifact_dir/maestro-output.XXXXXX")"
+run_maestro() {
   maestro --device "$device_id" test --test-output-dir "$maestro_output_dir" .maestro/smoke.yaml
+}
+
+if run_maestro 2>&1 | tee "$maestro_log"; then
+  :
 else
-  exit 1
+  echo "Maestro failed once; retrying on the booted simulator after a fresh install." >&2
+  xcrun simctl terminate "$device_id" com.marginallybetterapps.musictools 2>/dev/null || true
+  xcrun simctl install "$device_id" "$app_path"
+  maestro_output_dir="$(mktemp -d "$artifact_dir/maestro-output.XXXXXX")"
+  maestro_log="$maestro_output_dir/maestro.log"
+  run_maestro 2>&1 | tee "$maestro_log"
 fi
 
 raw_video="$(find "$maestro_output_dir" -type f -name 'e2e-demo-raw*.mp4' -print -quit)"

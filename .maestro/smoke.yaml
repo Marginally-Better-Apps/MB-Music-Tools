@@ -1,8 +1,7 @@
 appId: com.marginallybetterapps.musictools
 name: Compact Tuner and Metronome shell
 ---
-- launchApp:
-    clearState: true
+- launchApp
 - extendedWaitUntil:
     visible: "Play a note when you are ready."
     timeout: 15000
