@@ -9,7 +9,10 @@ maestro_output_dir=''
 compressed_video=''
 
 cleanup() {
-  if [[ -n "$maestro_output_dir" && "$maestro_output_dir" == "$artifact_dir"/maestro-output.* ]]; then
+  local status=$?
+  # Keep Maestro's hierarchy dump and screenshots when the flow fails so CI
+  # can upload them. Successful runs only need the compressed demo video.
+  if [[ "$status" -eq 0 && -n "$maestro_output_dir" && "$maestro_output_dir" == "$artifact_dir"/maestro-output.* ]]; then
     rm -rf -- "$maestro_output_dir"
   fi
   if [[ -n "$compressed_video" && "$compressed_video" == "$artifact_dir"/e2e-demo.*.mp4 ]]; then

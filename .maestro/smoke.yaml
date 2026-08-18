@@ -12,8 +12,17 @@ name: Compact Tuner and Metronome shell
     visible: "Recording hold"
     timeout: 4000
     optional: true
-- tapOn: "Metronome"
-- assertVisible: "Set a tempo when you are ready."
+- repeat:
+    times: 3
+    while:
+      notVisible: "Set a tempo when you are ready."
+    commands:
+      - tapOn:
+          text: "Metronome"
+          retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Set a tempo when you are ready."
+    timeout: 15000
 - extendedWaitUntil:
     visible: "Recording hold"
     timeout: 4000

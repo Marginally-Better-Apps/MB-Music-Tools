@@ -39,6 +39,14 @@ jobs:
         run: command -v ffmpeg >/dev/null || brew install ffmpeg
       - name: Run and record iOS acceptance test
         run: npm run ios:e2e
+      - name: Upload Maestro debug output
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: maestro-debug-${{ github.event.pull_request.number }}
+          path: artifacts/maestro-output.*/**
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Build unsigned IPA
         run: npm run ios:ipa
       - name: Upload iOS artifacts
