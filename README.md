@@ -2,7 +2,7 @@
 
 Free, open-source music tools for iPhone, built for the band student who deserves a great tuner, metronome, and practice companion without a subscription.
 
-This first pull request intentionally keeps Expo's SDK 57 starter screen. It gives us a known baseline while we establish the engineering and story-acceptance workflow around the app.
+The compact shell is Tuner and Metronome as native tabs. iPhone and iPad Split View share that layout; regular-width iPad chrome comes later.
 
 ## Product direction
 
