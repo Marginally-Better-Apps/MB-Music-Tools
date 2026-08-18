@@ -49,14 +49,15 @@ if [[ ! -d "$app_path" ]]; then
   exit 1
 fi
 
-device_id="$(xcrun simctl list devices booted -j | jq -r '[.devices[][] | select(.isAvailable and (.name | startswith("iPhone")))] | first | .udid // empty')"
+device_prefix="${E2E_DEVICE_PREFIX:-iPhone}"
+device_id="$(xcrun simctl list devices booted -j | jq -r --arg prefix "$device_prefix" '[.devices[][] | select(.isAvailable and (.name | startswith($prefix)))] | first | .udid // empty')"
 
 if [[ -z "$device_id" ]]; then
-  device_id="$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.isAvailable and (.name | startswith("iPhone")))] | first | .udid // empty')"
+  device_id="$(xcrun simctl list devices available -j | jq -r --arg prefix "$device_prefix" '[.devices[][] | select(.isAvailable and (.name | startswith($prefix)))] | first | .udid // empty')"
 fi
 
 if [[ -z "$device_id" ]]; then
-  echo "No available iPhone simulator was found." >&2
+  echo "No available ${device_prefix} simulator was found." >&2
   exit 1
 fi
 

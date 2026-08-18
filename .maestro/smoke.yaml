@@ -1,5 +1,5 @@
 appId: com.marginallybetterapps.musictools
-name: Compact Tuner and Metronome shell
+name: Tuner and Metronome empty states
 ---
 - launchApp:
     clearState: true
@@ -7,6 +7,7 @@ name: Compact Tuner and Metronome shell
     visible: "Play a note when you are ready."
     timeout: 15000
 - assertVisible: "Tuner"
+- assertNotVisible: "Welcome to Expo"
 - startRecording: e2e-demo-raw
 - extendedWaitUntil:
     visible: "Recording hold"
@@ -14,6 +15,7 @@ name: Compact Tuner and Metronome shell
     optional: true
 - tapOn: "Metronome"
 - assertVisible: "Set a tempo when you are ready."
+- assertNotVisible: "Welcome to Expo"
 - extendedWaitUntil:
     visible: "Recording hold"
     timeout: 4000
