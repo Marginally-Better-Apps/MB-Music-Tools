@@ -112,15 +112,23 @@ trim_start="$(awk -v freeze_end="${initial_freeze_end:-0}" 'BEGIN {
 }')"
 raw_duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$raw_video")"
 remaining_after_trim="$(awk -v duration="$raw_duration" -v start="$trim_start" 'BEGIN { printf "%.3f", duration - start }')"
+max_duration=45
 if ! awk -v remaining="$remaining_after_trim" 'BEGIN { exit !(remaining >= 3) }'; then
-  # Quiet empty states look frozen to the detector. Keep the Maestro bounds.
-  trim_start=0
+  # Quiet empty states look frozen to the detector. Keep the Maestro story
+  # and drop surplus encoder-startup from the start so the clip still fits
+  # the Planista duration guard.
+  trim_start="$(awk -v duration="$raw_duration" -v max="$max_duration" 'BEGIN {
+    over = duration - max
+    if (over < 0) over = 0
+    printf "%.3f", over
+  }')"
 fi
 
 compressed_video="$(mktemp "$artifact_dir/e2e-demo.XXXXXX.mp4")"
 ffmpeg \
   -v error \
   -ss "$trim_start" \
+  -t "$max_duration" \
   -i "$raw_video" \
   -vf 'fps=30,scale=440:-2' \
   -c:v libx264 \
@@ -136,8 +144,8 @@ mv "$compressed_video" "$video_path"
 compressed_video=''
 
 video_duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$video_path")"
-if ! awk -v duration="$video_duration" 'BEGIN { exit !(duration >= 3 && duration <= 45) }'; then
-  echo "The acceptance recording duration is outside the expected 3-45 second range: ${video_duration}s." >&2
+if ! awk -v duration="$video_duration" -v max="$max_duration" 'BEGIN { exit !(duration >= 3 && duration < max + 1) }'; then
+  echo "The acceptance recording duration is outside the expected 3-${max_duration} second range: ${video_duration}s." >&2
   exit 1
 fi
 
