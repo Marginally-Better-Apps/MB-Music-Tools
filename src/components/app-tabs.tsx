@@ -10,6 +10,7 @@ export default function AppTabs() {
 
   return (
     <NativeTabs
+      sidebarAdaptable
       backgroundColor={colors.background}
       indicatorColor={colors.backgroundElement}
       labelStyle={{ selected: { color: colors.text } }}>
