@@ -39,17 +39,7 @@
         }
       ],
       "expo-image",
-      "./plugins/withIosRelease.js",
-      [
-        "expo-audio",
-        {
-          "microphonePermission": false,
-          "recordAudioAndroid": false,
-          "enableBackgroundPlayback": false,
-          "enableBackgroundRecording": false
-        }
-      ],
-      "expo-asset"
+      "./plugins/withIosRelease.js"
     ],
     "experiments": {
       "typedRoutes": true,

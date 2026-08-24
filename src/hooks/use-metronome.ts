@@ -1,52 +1,53 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { bpmToIntervalMs, clampBpm, DEFAULT_BPM } from '@/lib/tempo';
+import { NativeMetronome } from '@/native/metronome';
 
-export function useMetronome(onBeat: () => void) {
+export function useMetronome() {
   const [bpm, setBpm] = useState(DEFAULT_BPM);
   const [playing, setPlaying] = useState(false);
-  const onBeatRef = useRef(onBeat);
+  const [beat, setBeat] = useState(0);
   const bpmRef = useRef(bpm);
 
   useEffect(() => {
-    onBeatRef.current = onBeat;
-  }, [onBeat]);
-
-  useEffect(() => {
-    bpmRef.current = bpm;
-  }, [bpm]);
-
-  useEffect(() => {
-    if (!playing) {
-      return;
-    }
-
-    let timeout: ReturnType<typeof setTimeout>;
-    const schedule = () => {
-      timeout = setTimeout(() => {
-        onBeatRef.current();
-        schedule();
-      }, bpmToIntervalMs(bpmRef.current));
-    };
-
-    schedule();
+    const beatSubscription = NativeMetronome.addListener('onBeat', (event) => {
+      setBeat(event.beat);
+    });
     return () => {
-      clearTimeout(timeout);
+      beatSubscription.remove();
+      NativeMetronome.stop();
     };
-  }, [playing]);
+  }, []);
+
+  const updateBpm = (nextBpm: number) => {
+    const clamped = clampBpm(nextBpm);
+    bpmRef.current = clamped;
+    setBpm(clamped);
+    NativeMetronome.setTempo(clamped);
+  };
 
   return {
     bpm,
+    beat,
     playing,
     intervalMs: bpmToIntervalMs(bpm),
     toggle() {
-      setPlaying((current) => !current);
+      setPlaying((current) => {
+        if (current) {
+          NativeMetronome.stop();
+          return false;
+        }
+
+        setBeat(0);
+        NativeMetronome.start(bpmRef.current);
+        return true;
+      });
     },
     increase() {
-      setBpm((current) => clampBpm(current + 1));
+      updateBpm(bpmRef.current + 1);
     },
     decrease() {
-      setBpm((current) => clampBpm(current - 1));
+      updateBpm(bpmRef.current - 1);
     },
   };
 }

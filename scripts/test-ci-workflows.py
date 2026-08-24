@@ -111,6 +111,7 @@ class PullRequestWorkflowTests(unittest.TestCase):
             "app.json",
             "src/**",
             "assets/**",
+            "modules/**",
             "plugins/**",
         ):
             with self.subTest(build_input=build_input):

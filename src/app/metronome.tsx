@@ -1,9 +1,10 @@
-import { useCallback, useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
-import * as Haptics from 'expo-haptics';
+import {
+  GlassView,
+  isGlassEffectAPIAvailable,
+  isLiquidGlassAvailable,
+} from 'expo-glass-effect';
 
 import { MetronomeBeat } from '@/components/metronome-beat';
 import { ThemedText } from '@/components/themed-text';
@@ -12,30 +13,11 @@ import { Fonts, Spacing } from '@/constants/theme';
 import { useMetronome } from '@/hooks/use-metronome';
 import { useTheme } from '@/hooks/use-theme';
 
-const clickSource = require('@/assets/sounds/metronome-click.wav');
-
 export default function MetronomeScreen() {
   const theme = useTheme();
-  const player = useAudioPlayer(clickSource);
-  const Surface = isLiquidGlassAvailable() ? GlassView : View;
-
-  const playClick = useCallback(() => {
-    void player.seekTo(0).then(() => {
-      player.play();
-    });
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
-  }, [player]);
-
-  const metronome = useMetronome(playClick);
-
-  useEffect(() => {
-    void setAudioModeAsync({
-      playsInSilentMode: true,
-      shouldPlayInBackground: false,
-      allowsRecording: false,
-      interruptionMode: 'mixWithOthers',
-    });
-  }, []);
+  const supportsGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
+  const Surface = supportsGlass ? GlassView : View;
+  const metronome = useMetronome();
 
   return (
     <ThemedView style={styles.screen}>
@@ -72,7 +54,11 @@ export default function MetronomeScreen() {
           </Pressable>
         </View>
 
-        <MetronomeBeat playing={metronome.playing} intervalMs={metronome.intervalMs} />
+        <MetronomeBeat
+          beat={metronome.beat}
+          playing={metronome.playing}
+          intervalMs={metronome.intervalMs}
+        />
 
         <Pressable
           accessibilityRole="button"
@@ -81,9 +67,13 @@ export default function MetronomeScreen() {
           style={styles.playHit}>
           <Surface
             glassEffectStyle="regular"
+            isInteractive={supportsGlass}
+            tintColor={theme.backgroundSelected}
             style={[
               styles.playControl,
-              { backgroundColor: theme.backgroundSelected },
+              {
+                backgroundColor: supportsGlass ? 'transparent' : theme.backgroundSelected,
+              },
             ]}>
             <ThemedText style={styles.playLabel}>{metronome.playing ? 'Stop' : 'Play'}</ThemedText>
           </Surface>

@@ -1,0 +1,28 @@
+import { NativeModule, requireOptionalNativeModule } from 'expo-modules-core';
+
+type MetronomeBeatEvent = {
+  beat: number;
+};
+
+type NativeMetronomeEvents = {
+  onBeat(event: MetronomeBeatEvent): void;
+};
+
+declare class NativeMetronomeModule extends NativeModule<NativeMetronomeEvents> {
+  start(bpm: number): void;
+  stop(): void;
+  setTempo(bpm: number): void;
+}
+
+const iosMetronome = requireOptionalNativeModule<NativeMetronomeModule>('NativeMetronome');
+
+const unavailableMetronome = {
+  start() {},
+  stop() {},
+  setTempo() {},
+  addListener() {
+    return { remove() {} };
+  },
+};
+
+export const NativeMetronome = iosMetronome ?? unavailableMetronome;
