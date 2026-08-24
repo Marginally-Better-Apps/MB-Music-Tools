@@ -79,7 +79,10 @@ function withExpoModulesJsiDateAbs(config) {
         );
       }
       const source = fs.readFileSync(file, 'utf8');
-      if (source.includes('Swift.abs(milliseconds)')) {
+      if (
+        source.includes('Swift.abs(milliseconds)') ||
+        source.includes('milliseconds.magnitude')
+      ) {
         return mod;
       }
       if (!source.includes('abs(milliseconds)')) {
@@ -96,11 +99,44 @@ function withExpoModulesJsiDateAbs(config) {
   ]);
 }
 
+function withExpoModulesJsiRuntimeScheduler(config) {
+  return withDangerousMod(config, [
+    'ios',
+    async (mod) => {
+      const file = path.join(
+        mod.modRequest.projectRoot,
+        'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h',
+      );
+      if (!fs.existsSync(file)) {
+        throw new Error(
+          'expo-modules-jsi RuntimeScheduler.h is missing; cannot apply the Xcode 26.3 SWIFT_RETURNS_RETAINED patch',
+        );
+      }
+      const source = fs.readFileSync(file, 'utf8');
+      if (!source.includes('SWIFT_RETURNS_RETAINED')) {
+        return mod;
+      }
+      const next = source.replaceAll('SWIFT_RETURNS_RETAINED ', '');
+      if (next.includes('SWIFT_RETURNS_RETAINED')) {
+        throw new Error(
+          'expo-modules-jsi RuntimeScheduler.h still has SWIFT_RETURNS_RETAINED after the Xcode 26.3 patch',
+        );
+      }
+      fs.writeFileSync(file, next);
+      return mod;
+    },
+  ]);
+}
+
 function withIosRelease(config) {
   config.ios = config.ios ?? {};
   config.ios.infoPlist = config.ios.infoPlist ?? {};
   delete config.ios.infoPlist.UIDesignRequiresCompatibility;
-  return withEmbeddedBundleURL(withForcedDebugBundle(withExpoModulesJsiDateAbs(config)));
+  return withEmbeddedBundleURL(
+    withForcedDebugBundle(
+      withExpoModulesJsiRuntimeScheduler(withExpoModulesJsiDateAbs(config)),
+    ),
+  );
 }
 
 module.exports = withIosRelease;
