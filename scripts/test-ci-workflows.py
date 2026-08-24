@@ -51,6 +51,7 @@ class PullRequestWorkflowTests(unittest.TestCase):
         plugin = (ROOT / "plugins" / "withIosRelease.js").read_text()
         self.assertIn("JavaScriptCodable+Date.swift", plugin)
         self.assertIn("Swift.abs(milliseconds)", plugin)
+        self.assertIn("milliseconds.magnitude", plugin)
         date_swift = (
             ROOT
             / "node_modules"
@@ -63,8 +64,11 @@ class PullRequestWorkflowTests(unittest.TestCase):
         )
         self.assertTrue(date_swift.exists(), "npm ci must install expo-modules-jsi before this test")
         source = date_swift.read_text()
-        if "Swift.abs(milliseconds)" not in source:
-            self.assertIn("abs(milliseconds)", source)
+        self.assertTrue(
+            "Swift.abs(milliseconds)" in source
+            or "abs(milliseconds)" in source
+            or "milliseconds.magnitude" in source
+        )
 
     def test_debug_builds_can_embed_the_js_bundle(self) -> None:
         plugin = (ROOT / "plugins" / "withIosRelease.js").read_text()

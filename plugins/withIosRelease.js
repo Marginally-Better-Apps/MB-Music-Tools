@@ -79,7 +79,10 @@ function withExpoModulesJsiDateAbs(config) {
         );
       }
       const source = fs.readFileSync(file, 'utf8');
-      if (source.includes('Swift.abs(milliseconds)')) {
+      if (
+        source.includes('Swift.abs(milliseconds)') ||
+        source.includes('milliseconds.magnitude')
+      ) {
         return mod;
       }
       if (!source.includes('abs(milliseconds)')) {
