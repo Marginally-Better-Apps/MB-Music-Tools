@@ -1,4 +1,4 @@
 interface:
   display_name: "iOS Story Demo"
   short_description: "Record and publish iOS story acceptance"
-  default_prompt: "Use $demo-ios-story to implement an issue and publish its recorded iOS acceptance demo on the pull request."
+  default_prompt: "Use $demo-ios-story to implement an issue, record acceptance locally with ./scripts/record-demo.sh, and open a PR against main for Autoloader CI."

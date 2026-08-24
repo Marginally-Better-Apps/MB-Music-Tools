@@ -12,6 +12,18 @@ build/
 coverage/
 expo-env.d.ts
 
+# Xcode
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Python tooling
+__pycache__/
+*.pyc
+
+# Maestro
+.maestro/
+
 # Native
 .kotlin/
 *.orig.*
