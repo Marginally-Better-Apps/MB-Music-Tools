@@ -131,7 +131,7 @@ jobs:
 
       - name: Update PR preview comment
         if: steps.preview.outputs.shim-url
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           SHIM_URL: ${{ steps.preview.outputs.shim-url }}
           IPA_URL: ${{ steps.preview.outputs.ipa-url }}
