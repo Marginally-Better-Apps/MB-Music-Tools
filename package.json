@@ -50,9 +50,7 @@
     "test:watch": "jest --watch",
     "doctor": "expo-doctor",
     "validate": "npm run doctor && npm run lint && npm run typecheck && npm test",
-    "ios:prebuild": "bash scripts/ios/prepare-native.sh",
-    "ios:e2e": "bash scripts/ios/run-e2e.sh",
-    "ios:ipa": "bash scripts/ios/build-unsigned-ipa.sh"
+    "prebuild": "CI=1 expo prebuild --platform ios"
   },
   "jest": {
     "preset": "jest-expo",

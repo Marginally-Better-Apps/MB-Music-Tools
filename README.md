@@ -13,7 +13,7 @@ Tuner and Metronome are native tabs. Compact width (iPhone and iPad Split View) 
 
 ## Local development
 
-Requirements: Node.js 24+, npm, Xcode 26.4+, CocoaPods, FFmpeg, and an iOS 26 simulator.
+Requirements: Node.js 24+, npm, Xcode 26.4+, CocoaPods, and an iOS 26 simulator. Maestro CLI and Java 17+ are only needed when recording end-to-end flows.
 
 ```sh
 npm ci
@@ -24,40 +24,35 @@ Use `npm run ios`, `npm run android`, or `npm run web` to open a target platform
 
 ## Quality checks
 
-Run the complete fast validation suite:
-
 ```sh
 npm run validate
 ```
 
-That runs Expo Doctor, ESLint, TypeScript, and Jest. To run the iOS end-to-end test and capture its demo video, install [Maestro 2.8.0](https://docs.maestro.dev/getting-started/installing-maestro), then run:
+That runs Expo Doctor, ESLint, TypeScript, and Jest.
+
+Record the default Maestro smoke flow locally with:
 
 ```sh
-npm run ios:e2e
+./scripts/record-demo.sh
 ```
 
-The recorded acceptance demo is written to `artifacts/e2e-demo.mp4`.
+The clip is written to `artifacts/music-tools-demo.mp4`. CI does not record video.
 
-## iOS previews
+## CI, Autoloader previews, and tagless releases
 
-Every in-repository pull request runs the acceptance flow on an iOS simulator, records it, builds an unsigned device IPA, and updates a PR comment with:
+Pull requests against `main` run the validation suite, policy scripts, and an iOS Simulator Release build with an embedded JS bundle. They also archive an unsigned IPA, publish GitHub prerelease `pr-<number>`, and comment a tappable Autoloader link. Autoloader PR previews are described in [docs/AUTOLOADER_DEV_CYCLE.md](docs/AUTOLOADER_DEV_CYCLE.md).
 
-- a public Planista link to the demo video;
-- a GitHub Actions artifact link for the unsigned IPA.
+On `main`, only these commit/PR titles produce a semantic unsigned IPA artifact:
 
-Build an unsigned IPA locally with:
+- `fix: ...` → patch
+- `feat: ...` → minor
+- `feat!: ...` or `feat(scope)!: ...` → major
 
-```sh
-npm run ios:ipa
-```
-
-The result is `artifacts/MB-Music-Tools-unsigned.ipa`. An unsigned IPA cannot be installed directly by stock iOS; it must first be signed with your Apple development identity or a sideloading tool. We deliberately keep credentials out of CI.
-
-Every push to `main` also creates a GitHub Release named for the commit and attaches the unsigned IPA.
+Other titles do not release. Versions are calculated from first-parent commit messages. Squash-merging is recommended so the PR title is retained as the commit subject. Unsigned IPAs must be signed separately before physical-device installation; Autoloader does that on-device after the first setup.
 
 ## Story acceptance
 
-Each feature should arrive with a Maestro flow that proves its acceptance criteria through visible behavior. The automated PR preview records that exact flow, so reviewers see the same path the test validated. The repository-local `demo-ios-story` skill documents the repeatable issue-to-PR workflow for coding agents.
+Each feature should arrive with a Maestro flow under `e2e/` that proves its acceptance criteria through visible behavior. Record that flow on this Mac with `./scripts/record-demo.sh`. The repository-local `demo-ios-story` skill documents the repeatable issue-to-PR workflow for coding agents.
 
 ## License
 
