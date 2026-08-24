@@ -1,0 +1,37 @@
+name: Unsigned iOS Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: unsigned-ios-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run validate
+      - run: npm run ios:prebuild
+      - run: npm run ios:ipa
+      - name: Create release with unsigned IPA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          short_sha="${GITHUB_SHA::7}"
+          tag="build-$(date -u +%Y%m%d-%H%M%S)-$short_sha"
+          gh release create "$tag" artifacts/MB-Music-Tools-unsigned.ipa \
+            --target "$GITHUB_SHA" \
+            --title "Marginally Better Music Tools $short_sha" \
+            --notes "Automated unsigned iOS build from main at $GITHUB_SHA. Sign the IPA before installing it on a physical device."
