@@ -11,6 +11,17 @@ jest.mock('@/native/metronome', () => ({
   },
 }));
 
+jest.mock('expo-glass-effect', () => {
+  const React = jest.requireActual('react');
+  const { View } = jest.requireActual('react-native');
+
+  return {
+    GlassView: (props: object) => React.createElement(View, props),
+    isGlassEffectAPIAvailable: () => true,
+    isLiquidGlassAvailable: () => true,
+  };
+});
+
 describe('<MetronomeScreen />', () => {
   test('shows a large default tempo and a play control a stranger can find', async () => {
     const { getByLabelText, getByText, queryByText } = await render(<MetronomeScreen />);
@@ -49,6 +60,18 @@ describe('<MetronomeScreen />', () => {
     await fireEvent.press(getByLabelText('Start metronome'));
     await fireEvent.press(getByLabelText('Increase tempo'));
     expect(getByText('121')).toBeTruthy();
+  });
+
+  test('renders both tempo steppers as interactive Liquid Glass controls', async () => {
+    const { getAllByTestId } = await render(<MetronomeScreen />);
+
+    const glassSteppers = getAllByTestId('tempo-stepper-glass');
+
+    expect(glassSteppers).toHaveLength(2);
+    for (const stepper of glassSteppers) {
+      expect(stepper.props.glassEffectStyle).toBe('regular');
+      expect(stepper.props.isInteractive).toBe(true);
+    }
   });
 
   test('keeps tempo inside 30 to 300', async () => {

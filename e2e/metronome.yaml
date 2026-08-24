@@ -16,8 +16,10 @@ appId: com.marginallybetterapps.musictools
 - assertVisible: "Stop metronome"
 - waitForAnimationToEnd:
     timeout: 2000
+- tapOn: "Decrease tempo"
+- assertVisible: "119 BPM"
 - tapOn: "Increase tempo"
-- assertVisible: "121 BPM"
+- assertVisible: "120 BPM"
 - tapOn: "Stop metronome"
 - assertVisible: "Start metronome"
 - stopRecording

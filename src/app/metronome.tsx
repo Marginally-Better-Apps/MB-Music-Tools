@@ -28,11 +28,18 @@ export default function MetronomeScreen() {
             accessibilityLabel="Decrease tempo"
             hitSlop={8}
             onPress={metronome.decrease}
-            style={({ pressed }) => [
-              styles.stepper,
-              { backgroundColor: theme.backgroundElement, opacity: pressed ? 0.7 : 1 },
-            ]}>
-            <ThemedText style={styles.stepperLabel}>−</ThemedText>
+            style={styles.stepperHit}>
+            <Surface
+              testID="tempo-stepper-glass"
+              glassEffectStyle="regular"
+              isInteractive={supportsGlass}
+              tintColor={theme.backgroundElement}
+              style={[
+                styles.stepper,
+                { backgroundColor: supportsGlass ? 'transparent' : theme.backgroundElement },
+              ]}>
+              <ThemedText style={styles.stepperLabel}>−</ThemedText>
+            </Surface>
           </Pressable>
 
           <ThemedText
@@ -46,11 +53,18 @@ export default function MetronomeScreen() {
             accessibilityLabel="Increase tempo"
             hitSlop={8}
             onPress={metronome.increase}
-            style={({ pressed }) => [
-              styles.stepper,
-              { backgroundColor: theme.backgroundElement, opacity: pressed ? 0.7 : 1 },
-            ]}>
-            <ThemedText style={styles.stepperLabel}>+</ThemedText>
+            style={styles.stepperHit}>
+            <Surface
+              testID="tempo-stepper-glass"
+              glassEffectStyle="regular"
+              isInteractive={supportsGlass}
+              tintColor={theme.backgroundElement}
+              style={[
+                styles.stepper,
+                { backgroundColor: supportsGlass ? 'transparent' : theme.backgroundElement },
+              ]}>
+              <ThemedText style={styles.stepperLabel}>+</ThemedText>
+            </Surface>
           </Pressable>
         </View>
 
@@ -115,6 +129,9 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stepperHit: {
+    borderRadius: 32,
   },
   stepperLabel: {
     fontSize: 36,
