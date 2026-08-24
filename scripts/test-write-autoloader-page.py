@@ -22,6 +22,16 @@ class WriteAutoloaderPageTests(unittest.TestCase):
         self.assertIn("https%3A%2F%2Fgithub.com%2Forg%2Frepo", url)
         self.assertNotIn("url=https://", url)
 
+    def test_https_shim_uses_autoloaders_own_pages(self) -> None:
+        ipa = "https://github.com/org/repo/releases/download/pr-12/MB-Music-Tools-unsigned.ipa"
+        url = page.https_shim_url(ipa)
+        self.assertTrue(
+            url.startswith("https://marginally-better-apps.github.io/Autoloader/?url=")
+        )
+        self.assertIn("https%3A%2F%2Fgithub.com%2Forg%2Frepo", url)
+        self.assertNotIn("url=https://", url)
+        self.assertNotIn("/MB-Music-Tools/pr/", url)
+
     def test_page_opens_autoloader_and_keeps_an_https_fallback(self) -> None:
         ipa = "https://example.test/app.ipa?x=1&y=2"
         with tempfile.TemporaryDirectory() as tmp:

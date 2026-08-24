@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write a GitHub Pages trampoline that opens autoloader://."""
+"""Build Autoloader install URLs. Prefer the global HTTPS shim Autoloader hosts."""
 
 from __future__ import annotations
 
@@ -8,9 +8,15 @@ from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
+AUTOLOADER_SHIM = "https://marginally-better-apps.github.io/Autoloader/"
+
 
 def autoloader_url(ipa_url: str) -> str:
     return "autoloader://install?url=" + quote(ipa_url, safe="")
+
+
+def https_shim_url(ipa_url: str) -> str:
+    return AUTOLOADER_SHIM.rstrip("/") + "/?url=" + quote(ipa_url, safe="")
 
 
 def render_page(ipa_url: str, title: str) -> str:
@@ -77,9 +83,15 @@ def write_page(*, ipa_url: str, output: Path, title: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ipa-url", required=True)
-    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--print-shim", action="store_true")
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--title", default="this build")
     args = parser.parse_args()
+    if args.print_shim:
+        print(https_shim_url(args.ipa_url))
+        return
+    if args.output is None:
+        raise SystemExit("pass --print-shim or --output")
     write_page(ipa_url=args.ipa_url, output=args.output, title=args.title)
 
 
