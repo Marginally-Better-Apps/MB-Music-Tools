@@ -43,9 +43,9 @@ export default function MetronomeScreen() {
           </Pressable>
 
           <ThemedText
-            accessibilityLabel={`${metronome.bpm} BPM`}
+            accessibilityLabel={`${metronome.displayBpm} BPM`}
             style={styles.bpm}>
-            {metronome.bpm}
+            {metronome.displayBpm}
           </ThemedText>
 
           <Pressable
@@ -74,24 +74,49 @@ export default function MetronomeScreen() {
           intervalMs={metronome.intervalMs}
         />
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={metronome.playing ? 'Stop metronome' : 'Start metronome'}
-          onPress={metronome.toggle}
-          style={styles.playHit}>
-          <Surface
-            glassEffectStyle="regular"
-            isInteractive={supportsGlass}
-            tintColor={theme.backgroundSelected}
-            style={[
-              styles.playControl,
-              {
-                backgroundColor: supportsGlass ? 'transparent' : theme.backgroundSelected,
-              },
-            ]}>
-            <ThemedText style={styles.playLabel}>{metronome.playing ? 'Stop' : 'Play'}</ThemedText>
-          </Surface>
-        </Pressable>
+        <View style={styles.transportRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tap tempo"
+            accessibilityHint="Tap four steady beats to set the tempo"
+            onPress={metronome.tap}
+            style={styles.transportHit}>
+            <Surface
+              testID="tap-tempo-glass"
+              glassEffectStyle="regular"
+              isInteractive={supportsGlass}
+              tintColor={theme.backgroundSelected}
+              style={[
+                styles.transportControl,
+                {
+                  backgroundColor: supportsGlass ? 'transparent' : theme.backgroundSelected,
+                },
+              ]}>
+              <ThemedText style={styles.transportLabel}>Tap</ThemedText>
+            </Surface>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={metronome.playing ? 'Stop metronome' : 'Start metronome'}
+            onPress={metronome.toggle}
+            style={styles.transportHit}>
+            <Surface
+              glassEffectStyle="regular"
+              isInteractive={supportsGlass}
+              tintColor={theme.backgroundSelected}
+              style={[
+                styles.transportControl,
+                {
+                  backgroundColor: supportsGlass ? 'transparent' : theme.backgroundSelected,
+                },
+              ]}>
+              <ThemedText style={styles.transportLabel}>
+                {metronome.playing ? 'Stop' : 'Play'}
+              </ThemedText>
+            </Surface>
+          </Pressable>
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
@@ -138,18 +163,26 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 40,
   },
-  playHit: {
+  transportRow: {
+    width: '100%',
+    maxWidth: 360,
+    flexDirection: 'row',
+    gap: Spacing.three,
     marginTop: Spacing.two,
   },
-  playControl: {
-    minWidth: 168,
+  transportHit: {
+    flex: 1,
+    borderRadius: 44,
+  },
+  transportControl: {
+    width: '100%',
     minHeight: 88,
-    paddingHorizontal: Spacing.five,
+    paddingHorizontal: Spacing.four,
     borderRadius: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playLabel: {
+  transportLabel: {
     fontSize: 28,
     fontWeight: '600',
     lineHeight: 34,

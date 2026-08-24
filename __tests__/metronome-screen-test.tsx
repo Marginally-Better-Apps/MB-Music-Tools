@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 import MetronomeScreen from '@/app/metronome';
 
@@ -72,6 +72,41 @@ describe('<MetronomeScreen />', () => {
       expect(stepper.props.glassEffectStyle).toBe('regular');
       expect(stepper.props.isInteractive).toBe(true);
     }
+  });
+
+  test('shows a thumb-sized interactive Liquid Glass Tap control beside Play', async () => {
+    const { getByLabelText, getByTestId } = await render(<MetronomeScreen />);
+
+    expect(getByLabelText('Tap tempo')).toBeTruthy();
+    expect(getByLabelText('Tap tempo')).toHaveStyle({ flex: 1 });
+    expect(getByTestId('tap-tempo-glass')).toHaveStyle({ minHeight: 88 });
+    expect(getByTestId('tap-tempo-glass').props.glassEffectStyle).toBe('regular');
+    expect(getByTestId('tap-tempo-glass').props.isInteractive).toBe(true);
+  });
+
+  test('waits for four taps, then counts the large BPM label to the measured tempo', async () => {
+    jest.useFakeTimers();
+    let timestamp = 0;
+    const now = jest.spyOn(Date, 'now').mockImplementation(() => timestamp);
+    const { getByLabelText, getByText } = await render(<MetronomeScreen />);
+
+    for (timestamp of [0, 690, 1380]) {
+      await fireEvent.press(getByLabelText('Tap tempo'));
+      expect(getByText('120')).toBeTruthy();
+    }
+
+    timestamp = 2070;
+    await fireEvent.press(getByLabelText('Tap tempo'));
+    expect(getByText('120')).toBeTruthy();
+
+    await act(async () => {
+      jest.advanceTimersByTime(320);
+    });
+    expect(getByText('87')).toBeTruthy();
+    expect(getByLabelText('87 BPM')).toBeTruthy();
+
+    now.mockRestore();
+    jest.useRealTimers();
   });
 
   test('keeps tempo inside 30 to 300', async () => {
