@@ -97,7 +97,7 @@ jobs:
           ./scripts/assert-embedded-bundle.sh artifacts/MB-Music-Tools-unsigned.ipa
 
       - name: Upload unsigned IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: MB-Music-Tools-PR-${{ github.event.pull_request.number || github.run_number }}-unsigned
           path: artifacts/MB-Music-Tools-unsigned.ipa
