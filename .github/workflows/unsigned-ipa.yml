@@ -116,7 +116,7 @@ jobs:
           TAG="pr-${PR_NUMBER}"
           IPA_NAME="MB-Music-Tools-unsigned.ipa"
           IPA_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${TAG}/${IPA_NAME}"
-          SHIM_URL="$(python3 scripts/write-autoloader-page.py --ipa-url "${IPA_URL}" --print-shim)"
+          SHIM_URL="$(python3 scripts/autoloader-link.py "${IPA_URL}")"
 
           gh release delete "${TAG}" --yes --cleanup-tag || true
           gh release create "${TAG}" "artifacts/${IPA_NAME}" \
@@ -143,7 +143,7 @@ jobs:
 
             [Open in Autoloader](${process.env.SHIM_URL})
 
-            That link is Autoloader's HTTPS shim. GitHub will not make \`autoloader://\` tappable. If you are in the GitHub app and nothing happens, open it in Safari.
+            That is Autoloader's hosted HTTPS shim. GitHub will not make \`autoloader://\` tappable. If you are in the GitHub app and nothing happens, open it in Safari.
 
             The unsigned IPA is also at [the PR preview release](${process.env.IPA_URL}). Sign it with your own certificate. Autoloader does that for you after the first setup.
 

@@ -1,40 +1,18 @@
 # Autoloader PR preview
 
-The installer is Autoloader. A PR comments a tappable HTTPS link that Autoloader itself hosts.
+GitHub Actions artifact URLs 404 unless you are logged in. GitHub markdown will not make `autoloader://` tappable.
 
-## Why this shape
-
-- Autoloader downloads a plain HTTPS IPA. GitHub Actions artifact URLs 404 unless you are logged into github.com.
-- GitHub markdown will not turn `autoloader://` into a tap target. PR comments can only link `https://`.
-- A public **prerelease** tagged `pr-<number>` is a normal GitHub download URL.
-- Autoloader's own Pages shim is the tappable link:
+1. Publish the unsigned IPA as a public prerelease tagged `pr-<number>` with a stable filename.
+2. Comment this HTTPS link:
 
 ```
-https://marginally-better-apps.github.io/Autoloader/?url=<percent-encoded IPA URL>
+https://marginally-better-apps.github.io/Autoloader/?url=<percent-encoded release IPA URL>
 ```
 
-Do not use a per-repo `gh-pages` trampoline. Do not use Planista for the IPA. Do not use nightly.link.
+That page is Autoloader's shared shim. Do not add per-repo GitHub Pages trampolines. Do not generate a local HTML bounce page.
 
-## PR cycle
+QR Scanner still shows the older per-PR page pattern; this repo uses the shim above.
 
-1. Open a PR against `main`.
-2. CI archives an unsigned IPA and publishes (or replaces) GitHub prerelease `pr-N` with a stable asset name.
-3. CI comments `[Open in Autoloader](https://marginally-better-apps.github.io/Autoloader/?url=...)`.
-4. On the phone, tap that comment link. If the GitHub app swallows the bounce, open the page in Safari.
-5. Autoloader signs with the certificate already in Settings and installs with **Server** (no pairing file, no VPN).
-6. Closing the PR deletes the `pr-N` release/tag.
+Do not upload the IPA to Planista. Do not use nightly.link. Leave Autoloader’s Installation Type on **Server**.
 
-Keep `CFBundleIdentifier` stable across previews so Autoloader upgrades in place.
-
-## CI pieces
-
-- `scripts/write-autoloader-page.py --print-shim` — Autoloader HTTPS shim URL.
-- PR workflow: `gh release create pr-$N <ipa> --prerelease --latest=false --target $HEAD_SHA`, then comment the shim.
-- Closed-PR workflow: `gh release delete pr-$N --yes --cleanup-tag`.
-- Same-repo PRs only. Fork PRs cannot publish with `GITHUB_TOKEN`.
-
-`pr-N` tags are preview bookmarks, not product versions. Product releases can stay tagless.
-
-## Phone setup (once)
-
-Install Autoloader, import a signing certificate, leave Installation Type on Server. After that, the PR comment is the install path.
+Closing the PR deletes the `pr-<number>` release/tag.
