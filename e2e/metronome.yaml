@@ -1,10 +1,6 @@
 appId: com.marginallybetterapps.musictools
 ---
 - launchApp
-- assertVisible: "Play a note when you are ready."
-- assertVisible: "Tuner"
-- assertNotVisible: "Welcome to Expo"
-- startRecording: smoke
 - repeat:
     times: 3
     while:
@@ -14,5 +10,14 @@ appId: com.marginallybetterapps.musictools
           text: "Metronome"
           retryTapIfNoChange: true
 - assertVisible: "120 BPM"
+- assertVisible: "Start metronome"
+- startRecording: metronome
+- tapOn: "Start metronome"
+- assertVisible: "Stop metronome"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn: "Increase tempo"
+- assertVisible: "121 BPM"
+- tapOn: "Stop metronome"
 - assertVisible: "Start metronome"
 - stopRecording
