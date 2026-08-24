@@ -87,7 +87,7 @@ jobs:
 
       - name: Cache CocoaPods
         if: steps.release.outputs.build == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ios/Pods
           key: ios-pods-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json', 'app.json', 'modules/**', 'plugins/**') }}
@@ -101,7 +101,7 @@ jobs:
 
       - name: Cache DerivedData
         if: steps.release.outputs.build == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: DerivedData/Release
           key: ios-release-v3-${{ runner.os }}-${{ steps.xcode.outputs.cache-key }}-${{ hashFiles('package-lock.json', 'app.json', 'package.json', 'src/**', 'assets/**', 'modules/**', 'plugins/**') }}

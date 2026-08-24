@@ -91,7 +91,7 @@ jobs:
 
       - name: Cache CocoaPods
         id: pods-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ios/Pods
           key: ios-pods-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json', 'app.json', 'modules/**', 'plugins/**') }}
@@ -104,7 +104,7 @@ jobs:
 
       - name: Cache test build
         id: test-build-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: DerivedData/CI
           key: ios-ci-v3-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache-key }}-${{ hashFiles('package-lock.json', 'app.json', 'package.json', 'src/**', 'assets/**', 'modules/**', 'plugins/**') }}
