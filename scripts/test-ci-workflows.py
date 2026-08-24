@@ -47,6 +47,33 @@ class PullRequestWorkflowTests(unittest.TestCase):
                 self.assertIn("Xcode_26", text)
                 self.assertLess(text.index("xcode-select"), text.index("xcodebuild archive"))
 
+    def test_expo_modules_jsi_date_abs_is_disambiguated_for_xcode_26(self) -> None:
+        plugin = (ROOT / "plugins" / "withIosRelease.js").read_text()
+        self.assertIn("JavaScriptCodable+Date.swift", plugin)
+        self.assertIn("Swift.abs(milliseconds)", plugin)
+        date_swift = (
+            ROOT
+            / "node_modules"
+            / "expo-modules-jsi"
+            / "apple"
+            / "Sources"
+            / "ExpoModulesJSI"
+            / "Coding"
+            / "JavaScriptCodable+Date.swift"
+        )
+        self.assertTrue(date_swift.exists(), "npm ci must install expo-modules-jsi before this test")
+        source = date_swift.read_text()
+        if "Swift.abs(milliseconds)" not in source:
+            self.assertIn("abs(milliseconds)", source)
+
+    def test_debug_builds_can_embed_the_js_bundle(self) -> None:
+        plugin = (ROOT / "plugins" / "withIosRelease.js").read_text()
+        self.assertIn("FORCE_BUNDLING", plugin)
+        self.assertIn("SKIP_BUNDLING", plugin)
+        self.assertIn("-z", plugin)
+        self.assertIn("jsbundle", plugin)
+        self.assertIn("bundleURL", plugin)
+
     def test_ci_cache_is_invalidated_by_toolchain_and_build_inputs(self) -> None:
         text = workflow("ci.yml")
         self.assertIn("id: xcode", text)
@@ -58,6 +85,7 @@ class PullRequestWorkflowTests(unittest.TestCase):
             "app.json",
             "src/**",
             "assets/**",
+            "plugins/**",
         ):
             with self.subTest(build_input=build_input):
                 self.assertIn(build_input, text)

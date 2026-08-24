@@ -38,7 +38,8 @@
           "imageWidth": 128
         }
       ],
-      "expo-image"
+      "expo-image",
+      "./plugins/withIosRelease.js"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -58,7 +58,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ios/Pods
-          key: ios-pods-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json', 'app.json') }}
+          key: ios-pods-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json', 'app.json', 'plugins/**') }}
           restore-keys: |
             ios-pods-v1-${{ runner.os }}-${{ runner.arch }}-
 
@@ -70,7 +70,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: DerivedData/Archive
-          key: ios-archive-v3-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache-key }}-${{ hashFiles('package-lock.json', 'app.json', 'package.json', 'src/**', 'assets/**') }}
+          key: ios-archive-v3-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache-key }}-${{ hashFiles('package-lock.json', 'app.json', 'package.json', 'src/**', 'assets/**', 'plugins/**') }}
           restore-keys: |
             ios-archive-v3-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache-key }}-
 
