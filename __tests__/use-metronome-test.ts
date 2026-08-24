@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react-native';
+import { AccessibilityInfo } from 'react-native';
 
 import { useMetronome } from '@/hooks/use-metronome';
 
@@ -12,12 +13,14 @@ jest.mock('@/native/metronome', () => ({
 }));
 
 const mockNativeMetronome = jest.requireMock('@/native/metronome').NativeMetronome;
+const mockIsReduceMotionEnabled = jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled');
 let mockNativeBeatListener: ((event: { beat: number }) => void) | undefined;
 
 describe('useMetronome', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockIsReduceMotionEnabled.mockResolvedValue(false);
     mockNativeBeatListener = undefined;
     mockNativeMetronome.addListener.mockImplementation(
       (_eventName: string, listener: (event: { beat: number }) => void) => {
@@ -62,5 +65,79 @@ describe('useMetronome', () => {
     });
 
     expect(result.current.beat).toBe(1);
+  });
+
+  test('commits four steady taps and eases the displayed number to the measured tempo', async () => {
+    const now = jest.spyOn(Date, 'now');
+    const { result } = await renderHook(() => useMetronome());
+
+    for (const timestamp of [0, 690, 1380]) {
+      now.mockReturnValueOnce(timestamp);
+      await act(async () => {
+        result.current.tap();
+      });
+      expect(result.current.bpm).toBe(120);
+    }
+
+    now.mockReturnValueOnce(2070);
+    await act(async () => {
+      result.current.tap();
+    });
+
+    expect(result.current.bpm).toBe(87);
+    expect(result.current.displayBpm).toBe(120);
+    expect(result.current.intervalMs).toBeCloseTo(60_000 / 87);
+    expect(mockNativeMetronome.setTempo).toHaveBeenLastCalledWith(87);
+
+    await act(async () => {
+      jest.advanceTimersByTime(16);
+    });
+    expect(result.current.displayBpm).toBe(117);
+
+    await act(async () => {
+      jest.advanceTimersByTime(16);
+    });
+    expect(result.current.displayBpm).toBe(113);
+
+    await act(async () => {
+      jest.advanceTimersByTime(288);
+    });
+    expect(result.current.displayBpm).toBe(87);
+  });
+
+  test('drops a stray tap after a long pause before measuring four new taps', async () => {
+    const now = jest.spyOn(Date, 'now');
+    const { result } = await renderHook(() => useMetronome());
+
+    for (const timestamp of [0, 3000, 3750, 4500]) {
+      now.mockReturnValueOnce(timestamp);
+      await act(async () => {
+        result.current.tap();
+      });
+    }
+    expect(result.current.bpm).toBe(120);
+
+    now.mockReturnValueOnce(5250);
+    await act(async () => {
+      result.current.tap();
+    });
+    expect(result.current.bpm).toBe(80);
+  });
+
+  test('skips the count animation when Reduce Motion is enabled', async () => {
+    mockIsReduceMotionEnabled.mockResolvedValue(true);
+    let timestamp = 0;
+    jest.spyOn(Date, 'now').mockImplementation(() => timestamp);
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => undefined);
+    for (timestamp of [0, 690, 1380, 2070]) {
+      await act(async () => {
+        result.current.tap();
+      });
+    }
+
+    expect(result.current.bpm).toBe(87);
+    expect(result.current.displayBpm).toBe(87);
   });
 });
