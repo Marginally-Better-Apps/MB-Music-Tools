@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import TimeSignatureControl from '@expo/ui/community/segmented-control';
 import {
   GlassView,
   isGlassEffectAPIAvailable,
@@ -12,6 +13,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Fonts, Spacing } from '@/constants/theme';
 import { useMetronome } from '@/hooks/use-metronome';
 import { useTheme } from '@/hooks/use-theme';
+import { TIME_SIGNATURES, TimeSignature } from '@/lib/time-signature';
 
 export default function MetronomeScreen() {
   const theme = useTheme();
@@ -68,10 +70,29 @@ export default function MetronomeScreen() {
           </Pressable>
         </View>
 
+        <View style={styles.signatureGroup}>
+          <ThemedText
+            accessibilityLabel={`Time signature, ${metronome.timeSignature} selected`}
+            style={styles.signatureLabel}>
+            Time signature
+          </ThemedText>
+          <TimeSignatureControl
+            testID="time-signature-control"
+            values={[...TIME_SIGNATURES]}
+            selectedIndex={TIME_SIGNATURES.indexOf(metronome.timeSignature)}
+            onValueChange={(value) =>
+              metronome.selectTimeSignature(value as TimeSignature)
+            }
+            style={styles.signatureControl}
+          />
+        </View>
+
         <MetronomeBeat
           beat={metronome.beat}
+          beatsPerMeasure={metronome.beatsPerMeasure}
           playing={metronome.playing}
           intervalMs={metronome.intervalMs}
+          timeSignature={metronome.timeSignature}
         />
 
         <View style={styles.transportRow}>
@@ -147,6 +168,19 @@ const styles = StyleSheet.create({
     minWidth: 180,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
+  },
+  signatureGroup: {
+    width: '100%',
+    maxWidth: 360,
+    gap: Spacing.two,
+  },
+  signatureLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  signatureControl: {
+    height: 36,
   },
   stepper: {
     width: 64,

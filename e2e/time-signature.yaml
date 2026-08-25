@@ -1,0 +1,24 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp:
+    clearState: true
+- repeat:
+    times: 3
+    while:
+      notVisible: "Start metronome"
+    commands:
+      - tapOn:
+          text: "Metronome"
+          retryTapIfNoChange: true
+- assertVisible: "Time signature, 4/4 selected"
+- startRecording: time-signature-downbeat
+- tapOn: "3/4"
+- assertVisible: "Time signature, 3/4 selected"
+- tapOn: "Start metronome"
+- assertVisible: "Stop metronome"
+- extendedWaitUntil:
+    visible: "Downbeat"
+    timeout: 2000
+- tapOn: "Stop metronome"
+- assertVisible: "Start metronome"
+- stopRecording

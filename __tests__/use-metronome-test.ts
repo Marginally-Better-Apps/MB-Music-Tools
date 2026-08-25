@@ -8,6 +8,7 @@ jest.mock('@/native/metronome', () => ({
     start: jest.fn(),
     stop: jest.fn(),
     setTempo: jest.fn(),
+    setTimeSignature: jest.fn(),
     addListener: jest.fn(),
   },
 }));
@@ -40,7 +41,7 @@ describe('useMetronome', () => {
     await act(async () => {
       result.current.toggle();
     });
-    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120);
+    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4);
 
     await act(async () => {
       result.current.increase();
@@ -64,6 +65,50 @@ describe('useMetronome', () => {
       mockNativeBeatListener?.({ beat: 1 });
     });
 
+    expect(result.current.beat).toBe(1);
+  });
+
+  test.each([
+    ['2/4', [1, 2, 1, 2]],
+    ['3/4', [1, 2, 3, 1]],
+    ['4/4', [1, 2, 3, 4, 1]],
+    ['6/8', [1, 2, 3, 4, 5, 6, 1]],
+  ] as const)('cycles native ticks through %s', async (signature, expectedBeats) => {
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => {
+      result.current.selectTimeSignature(signature);
+      result.current.toggle();
+    });
+
+    const actualBeats: number[] = [];
+    for (const expectedBeat of expectedBeats) {
+      await act(async () => {
+        mockNativeBeatListener?.({ beat: expectedBeat });
+      });
+      actualBeats.push(result.current.beat);
+    }
+
+    expect(actualBeats).toEqual(expectedBeats);
+  });
+
+  test('applies a live signature change without starting another clock', async () => {
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => {
+      result.current.toggle();
+      mockNativeBeatListener?.({ beat: 1 });
+      result.current.selectTimeSignature('3/4');
+    });
+
+    expect(result.current.timeSignature).toBe('3/4');
+    expect(result.current.beat).toBe(0);
+    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(3);
+    expect(mockNativeMetronome.start).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      mockNativeBeatListener?.({ beat: 1 });
+    });
     expect(result.current.beat).toBe(1);
   });
 

@@ -8,6 +8,12 @@ import {
   DEFAULT_BPM,
   interpolateTempoEaseOut,
 } from '@/lib/tempo';
+import {
+  DEFAULT_TIME_SIGNATURE,
+  getBeatsPerMeasure,
+  nextBeat,
+  TimeSignature,
+} from '@/lib/time-signature';
 import { NativeMetronome } from '@/native/metronome';
 
 const TAP_TEMPO_RESET_MS = 2000;
@@ -19,15 +25,17 @@ export function useMetronome() {
   const [displayBpm, setDisplayBpm] = useState(DEFAULT_BPM);
   const [playing, setPlaying] = useState(false);
   const [beat, setBeat] = useState(0);
+  const [timeSignature, setTimeSignature] = useState<TimeSignature>(DEFAULT_TIME_SIGNATURE);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const bpmRef = useRef(bpm);
+  const timeSignatureRef = useRef(timeSignature);
   const displayBpmRef = useRef(displayBpm);
   const tapTimestampsRef = useRef<number[]>([]);
   const animationRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const beatSubscription = NativeMetronome.addListener('onBeat', (event) => {
-      setBeat(event.beat);
+    const beatSubscription = NativeMetronome.addListener('onBeat', () => {
+      setBeat((current) => nextBeat(current, timeSignatureRef.current));
     });
     return () => {
       beatSubscription.remove();
@@ -99,7 +107,9 @@ export function useMetronome() {
     bpm,
     displayBpm,
     beat,
+    beatsPerMeasure: getBeatsPerMeasure(timeSignature),
     playing,
+    timeSignature,
     intervalMs: bpmToIntervalMs(bpm),
     toggle() {
       setPlaying((current) => {
@@ -109,9 +119,18 @@ export function useMetronome() {
         }
 
         setBeat(0);
-        NativeMetronome.start(bpmRef.current);
+        NativeMetronome.start(
+          bpmRef.current,
+          getBeatsPerMeasure(timeSignatureRef.current)
+        );
         return true;
       });
+    },
+    selectTimeSignature(signature: TimeSignature) {
+      timeSignatureRef.current = signature;
+      setTimeSignature(signature);
+      setBeat(0);
+      NativeMetronome.setTimeSignature(getBeatsPerMeasure(signature));
     },
     increase() {
       tapTimestampsRef.current = [];

@@ -26,6 +26,8 @@ private final class MetronomeClock {
   private var nextBeatDeadline: DispatchTime?
   private var onBeat: ((Int) -> Void)?
   private var beat = 0
+  private var beatsPerMeasure = 4
+  private var currentBPM = 120
 
   init() {
     audioEngine.attach(player)
@@ -33,11 +35,12 @@ private final class MetronomeClock {
     audioEngine.prepare()
   }
 
-  func start(bpm: Int, onBeat: @escaping (Int) -> Void) {
+  func start(bpm: Int, beatsPerMeasure: Int, onBeat: @escaping (Int) -> Void) {
     clockQueue.async { [weak self] in
       guard let self else { return }
       self.onBeat = onBeat
       self.beat = 0
+      self.beatsPerMeasure = self.normalizedBeatsPerMeasure(beatsPerMeasure)
       self.isPlaying = true
 
       do {
@@ -71,6 +74,21 @@ private final class MetronomeClock {
     }
   }
 
+  func setTimeSignature(_ beatsPerMeasure: Int) {
+    clockQueue.async { [weak self] in
+      guard let self else { return }
+      self.beatsPerMeasure = self.normalizedBeatsPerMeasure(beatsPerMeasure)
+      self.beat = 0
+      guard self.isPlaying else { return }
+
+      let now = DispatchTime.now().uptimeNanoseconds
+      let scheduled = self.nextBeatDeadline?.uptimeNanoseconds ?? now
+      let delayNanoseconds = scheduled > now ? scheduled - now : 0
+      let delay = max(startLeadTime, Double(delayNanoseconds) / 1_000_000_000)
+      self.beginLoop(bpm: self.currentBPM, after: delay)
+    }
+  }
+
   private func activateAudioSession() throws {
     let session = AVAudioSession.sharedInstance()
     try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
@@ -79,9 +97,11 @@ private final class MetronomeClock {
 
   private func beginLoop(bpm: Int, after delay: TimeInterval) {
     let clampedBPM = min(maximumBPM, max(minimumBPM, bpm))
+    currentBPM = clampedBPM
     let interval = 60.0 / Double(clampedBPM)
     let intervalNanoseconds = Int(interval * 1_000_000_000)
-    let buffer = makeBeatBuffer(bpm: clampedBPM)
+    let firstBeat = (beat % beatsPerMeasure) + 1
+    let buffer = makeMeasureBuffer(bpm: clampedBPM, firstBeat: firstBeat)
 
     beatTimer?.cancel()
     player.stop()
@@ -90,18 +110,18 @@ private final class MetronomeClock {
     let targetHostTime = mach_absolute_time() + AVAudioTime.hostTime(forSeconds: delay)
     player.play(at: AVAudioTime(hostTime: targetHostTime))
 
-    let firstBeat = DispatchTime.now() + delay
-    nextBeatDeadline = firstBeat
+    let firstBeatDeadline = DispatchTime.now() + delay
+    nextBeatDeadline = firstBeatDeadline
 
     let timer = DispatchSource.makeTimerSource(queue: clockQueue)
     timer.schedule(
-      deadline: firstBeat,
+      deadline: firstBeatDeadline,
       repeating: .nanoseconds(intervalNanoseconds),
       leeway: .milliseconds(1)
     )
     timer.setEventHandler { [weak self] in
       guard let self, self.isPlaying else { return }
-      self.beat += 1
+      self.beat = (self.beat % self.beatsPerMeasure) + 1
       self.nextBeatDeadline = self.nextBeatDeadline?.advanced(
         by: .nanoseconds(intervalNanoseconds)
       )
@@ -111,20 +131,29 @@ private final class MetronomeClock {
     timer.resume()
   }
 
-  private func makeBeatBuffer(bpm: Int) -> AVAudioPCMBuffer {
+  private func makeMeasureBuffer(bpm: Int, firstBeat: Int) -> AVAudioPCMBuffer {
     let intervalFrames = AVAudioFrameCount((sampleRate * 60.0 / Double(bpm)).rounded())
-    let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: intervalFrames)!
-    buffer.frameLength = intervalFrames
+    let measureFrames = intervalFrames * AVAudioFrameCount(beatsPerMeasure)
+    let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: measureFrames)!
+    buffer.frameLength = measureFrames
 
     guard let samples = buffer.floatChannelData?[0] else { return buffer }
-    samples.initialize(repeating: 0, count: Int(intervalFrames))
+    samples.initialize(repeating: 0, count: Int(measureFrames))
 
     let clickFrames = min(Int(intervalFrames), Int(sampleRate * 0.018))
-    for frame in 0..<clickFrames {
-      let time = Double(frame) / sampleRate
-      let envelope = exp(-time * 260.0)
-      let tone = sin(2.0 * .pi * 1_600.0 * time)
-      samples[frame] = Float(tone * envelope * 0.72)
+    for beatOffset in 0..<beatsPerMeasure {
+      let beatNumber = ((firstBeat - 1 + beatOffset) % beatsPerMeasure) + 1
+      let isDownbeat = beatNumber == 1
+      let frequency = isDownbeat ? 2_100.0 : 1_600.0
+      let amplitude = isDownbeat ? 0.9 : 0.62
+      let frameOffset = beatOffset * Int(intervalFrames)
+
+      for frame in 0..<clickFrames {
+        let time = Double(frame) / sampleRate
+        let envelope = exp(-time * 260.0)
+        let tone = sin(2.0 * .pi * frequency * time)
+        samples[frameOffset + frame] = Float(tone * envelope * amplitude)
+      }
     }
 
     return buffer
@@ -132,11 +161,15 @@ private final class MetronomeClock {
 
   private func deliverBeat(_ beat: Int) {
     DispatchQueue.main.async { [weak self] in
-      let haptic = UIImpactFeedbackGenerator(style: .soft)
+      let haptic = UIImpactFeedbackGenerator(style: beat == 1 ? .heavy : .soft)
       haptic.prepare()
       haptic.impactOccurred()
       self?.onBeat?(beat)
     }
+  }
+
+  private func normalizedBeatsPerMeasure(_ beats: Int) -> Int {
+    [2, 3, 4, 6].contains(beats) ? beats : 4
   }
 
   private func stopLocked() {
@@ -162,8 +195,8 @@ public final class NativeMetronomeModule: Module {
 
     Events("onBeat")
 
-    Function("start") { (bpm: Int) in
-      self.clock.start(bpm: bpm) { [weak self] beat in
+    Function("start") { (bpm: Int, beatsPerMeasure: Int) in
+      self.clock.start(bpm: bpm, beatsPerMeasure: beatsPerMeasure) { [weak self] beat in
         self?.sendEvent("onBeat", ["beat": beat])
       }
     }
@@ -174,6 +207,10 @@ public final class NativeMetronomeModule: Module {
 
     Function("setTempo") { (bpm: Int) in
       self.clock.setTempo(bpm)
+    }
+
+    Function("setTimeSignature") { (beatsPerMeasure: Int) in
+      self.clock.setTimeSignature(beatsPerMeasure)
     }
 
     OnAppEntersBackground {
