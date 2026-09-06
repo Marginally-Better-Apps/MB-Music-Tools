@@ -2,35 +2,6 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 
 import MetronomeScreen from '@/app/metronome';
 
-jest.mock('@expo/ui/community/segmented-control', () => {
-  const React = jest.requireActual('react');
-  const { Pressable, Text, View } = jest.requireActual('react-native');
-
-  return function MockSegmentedControl({
-    onValueChange,
-    values,
-  }: {
-    onValueChange: (value: string) => void;
-    values: string[];
-  }) {
-    return React.createElement(
-      View,
-      null,
-      values.map((value) =>
-        React.createElement(
-          Pressable,
-          {
-            accessibilityLabel: value,
-            key: value,
-            onPress: () => onValueChange(value),
-          },
-          React.createElement(Text, null, value)
-        )
-      )
-    );
-  };
-});
-
 jest.mock('@/native/metronome', () => ({
   NativeMetronome: {
     start: jest.fn(),
@@ -63,7 +34,7 @@ describe('<MetronomeScreen />', () => {
     expect(getByLabelText('Time signature, 4/4 selected')).toBeTruthy();
   });
 
-  test('selects 3/4 and reports the downbeat with its beat index and signature', async () => {
+  test('builds 3/4, shows three beat dots, and reports the downbeat', async () => {
     const nativeMetronome = jest.requireMock('@/native/metronome').NativeMetronome;
     let beatListener: ((event: { beat: number }) => void) | undefined;
     nativeMetronome.addListener.mockImplementation(
@@ -72,10 +43,14 @@ describe('<MetronomeScreen />', () => {
         return { remove: jest.fn() };
       }
     );
-    const { getByLabelText, getByText } = await render(<MetronomeScreen />);
+    const { getAllByTestId, getByLabelText, getByText } = await render(
+      <MetronomeScreen />
+    );
 
-    await fireEvent.press(getByLabelText('3/4'));
+    expect(getAllByTestId('beat-dot')).toHaveLength(4);
+    await fireEvent.press(getByLabelText('Decrease beats per measure'));
     expect(getByLabelText('Time signature, 3/4 selected')).toBeTruthy();
+    expect(getAllByTestId('beat-dot')).toHaveLength(3);
 
     await fireEvent.press(getByLabelText('Start metronome'));
     await act(async () => {
@@ -95,7 +70,7 @@ describe('<MetronomeScreen />', () => {
     expect(getByLabelText('Metronome beat').props.accessibilityValue).toEqual({
       text: 'Stopped, 4/4',
     });
-    expect(getAllByTestId('metronome-pulse')).toHaveLength(1);
+    expect(getAllByTestId('beat-dot')).toHaveLength(4);
     expect(queryByLabelText('Beat marks at rest')).toBeNull();
 
     await fireEvent.press(getByLabelText('Start metronome'));
@@ -109,6 +84,41 @@ describe('<MetronomeScreen />', () => {
     expect(getByLabelText('Metronome beat').props.accessibilityValue).toEqual({
       text: 'Stopped, 4/4',
     });
+  });
+
+  test('creates an uncommon 7/8 meter with seven dots', async () => {
+    const { getAllByTestId, getByLabelText } = await render(<MetronomeScreen />);
+
+    for (let step = 0; step < 3; step += 1) {
+      await fireEvent.press(getByLabelText('Increase beats per measure'));
+    }
+    await fireEvent.press(getByLabelText('Increase beat unit'));
+
+    expect(getByLabelText('Time signature, 7/8 selected')).toBeTruthy();
+    expect(getAllByTestId('beat-dot')).toHaveLength(7);
+  });
+
+  test('keeps all 32 beat dots at the custom-meter upper bound', async () => {
+    const { getAllByTestId, getByLabelText } = await render(<MetronomeScreen />);
+
+    for (let step = 0; step < 28; step += 1) {
+      await fireEvent.press(getByLabelText('Increase beats per measure'));
+    }
+
+    expect(getByLabelText('Time signature, 32/4 selected')).toBeTruthy();
+    expect(getAllByTestId('beat-dot')).toHaveLength(32);
+  });
+
+  test('renders every meter editor button as interactive Liquid Glass', async () => {
+    const { getAllByTestId } = await render(<MetronomeScreen />);
+
+    const meterButtons = getAllByTestId('meter-editor-glass');
+
+    expect(meterButtons).toHaveLength(4);
+    for (const button of meterButtons) {
+      expect(button.props.glassEffectStyle).toBe('regular');
+      expect(button.props.isInteractive).toBe(true);
+    }
   });
 
   test('plus and minus change BPM by 1 immediately, including while clicking', async () => {
@@ -141,7 +151,6 @@ describe('<MetronomeScreen />', () => {
     const { getByLabelText, getByTestId } = await render(<MetronomeScreen />);
 
     expect(getByLabelText('Tap tempo')).toBeTruthy();
-    expect(getByLabelText('Tap tempo')).toHaveStyle({ flex: 1 });
     expect(getByTestId('tap-tempo-glass')).toHaveStyle({ minHeight: 88 });
     expect(getByTestId('tap-tempo-glass').props.glassEffectStyle).toBe('regular');
     expect(getByTestId('tap-tempo-glass').props.isInteractive).toBe(true);

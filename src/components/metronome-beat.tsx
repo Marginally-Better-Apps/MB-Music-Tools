@@ -10,8 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { TimeSignature } from '@/lib/time-signature';
 
-const PULSE_SIZE = 184;
-const RESTING_SCALE = 0.72;
+const DOT_SIZE = 22;
 
 type MetronomeBeatProps = {
   beat: number;
@@ -29,45 +28,39 @@ export function MetronomeBeat({
   timeSignature,
 }: MetronomeBeatProps) {
   const theme = useTheme();
-  const [scale] = useState(() => new Animated.Value(RESTING_SCALE));
+  const [pulse] = useState(() => new Animated.Value(0));
   const supportsGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
-  const Pulse = supportsGlass ? GlassView : View;
+  const Dot = supportsGlass ? GlassView : View;
   const isDownbeat = playing && beat === 1;
 
   useEffect(() => {
-    if (!playing) {
-      const rest = Animated.spring(scale, {
-        toValue: RESTING_SCALE,
-        damping: 17,
-        stiffness: 180,
-        mass: 0.8,
-        useNativeDriver: true,
-      });
-      rest.start();
-      return () => rest.stop();
-    }
-
-    if (beat === 0) {
+    if (!playing || beat === 0) {
+      pulse.setValue(0);
       return;
     }
 
-    const pulse = Animated.sequence([
-      Animated.timing(scale, {
-        toValue: isDownbeat ? 1.08 : 0.96,
+    const animation = Animated.sequence([
+      Animated.timing(pulse, {
+        toValue: 1,
         duration: Math.min(90, intervalMs * 0.2),
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-      Animated.timing(scale, {
-        toValue: RESTING_SCALE,
+      Animated.timing(pulse, {
+        toValue: 0,
         duration: Math.max(90, intervalMs * 0.68),
         easing: Easing.inOut(Easing.cubic),
         useNativeDriver: true,
       }),
     ]);
-    pulse.start();
-    return () => pulse.stop();
-  }, [beat, intervalMs, isDownbeat, playing, scale]);
+    animation.start();
+    return () => animation.stop();
+  }, [beat, intervalMs, playing, pulse]);
+
+  const activeScale = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1.12, isDownbeat ? 1.58 : 1.42],
+  });
 
   const accessibilityValue = !playing
     ? `Stopped, ${timeSignature}`
@@ -81,69 +74,102 @@ export function MetronomeBeat({
       accessibilityLabel={isDownbeat ? 'Downbeat' : 'Metronome beat'}
       accessibilityValue={{ text: accessibilityValue }}
       style={styles.stage}>
-      <Animated.View style={[styles.pulseSlot, { transform: [{ scale }] }]}>
-        <Pulse
-          testID="metronome-pulse"
-          glassEffectStyle="regular"
-          tintColor={isDownbeat ? theme.textSecondary : theme.backgroundSelected}
-          style={[
-            styles.pulse,
-            {
-              backgroundColor: supportsGlass
-                ? 'transparent'
-                : isDownbeat
-                  ? theme.textSecondary
-                  : theme.backgroundSelected,
-              borderColor: theme.textSecondary,
-              borderWidth: isDownbeat ? 2 : StyleSheet.hairlineWidth,
-            },
-          ]}
-        />
-        <View pointerEvents="none" style={styles.beatLabel}>
-          {isDownbeat ? (
-            <ThemedText style={[styles.downbeat, { color: theme.background }]}>
-              Downbeat
-            </ThemedText>
-          ) : null}
-          <ThemedText
-            style={[styles.beatCount, isDownbeat && { color: theme.background }]}>
-            {playing ? `Beat ${beat} of ${beatsPerMeasure}` : timeSignature}
+      <View style={styles.dotField}>
+        {Array.from({ length: beatsPerMeasure }, (_, index) => {
+          const dotBeat = index + 1;
+          const isActive = playing && beat === dotBeat;
+          const isFirst = dotBeat === 1;
+
+          return (
+            <Animated.View
+              key={dotBeat}
+              style={[
+                styles.dotShell,
+                isActive && {
+                  shadowColor: theme.accent,
+                  shadowOpacity: isDownbeat ? 0.72 : 0.52,
+                  shadowRadius: isDownbeat ? 16 : 11,
+                  transform: [{ scale: activeScale }],
+                },
+              ]}>
+              <Dot
+                testID="beat-dot"
+                glassEffectStyle="clear"
+                tintColor={isActive ? theme.accent : theme.backgroundElement}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor: supportsGlass
+                      ? 'transparent'
+                      : isActive
+                        ? theme.accent
+                        : theme.backgroundElement,
+                    borderColor: isFirst ? theme.accent : theme.textSecondary,
+                    borderWidth: isFirst ? 1.5 : StyleSheet.hairlineWidth,
+                  },
+                ]}
+              />
+            </Animated.View>
+          );
+        })}
+      </View>
+      <View pointerEvents="none" style={styles.beatLabel}>
+        {isDownbeat ? (
+          <ThemedText style={[styles.downbeat, { color: theme.accent }]}>
+            Downbeat
           </ThemedText>
-        </View>
-      </Animated.View>
+        ) : null}
+        <ThemedText style={[styles.beatCount, { color: theme.textSecondary }]}>
+          {playing && beat > 0 ? `Beat ${beat} of ${beatsPerMeasure}` : timeSignature}
+        </ThemedText>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   stage: {
-    width: PULSE_SIZE,
-    height: PULSE_SIZE,
+    width: '100%',
+    minHeight: 104,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 18,
   },
-  pulseSlot: {
-    width: PULSE_SIZE,
-    height: PULSE_SIZE,
+  dotField: {
+    width: '100%',
+    maxWidth: 320,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
   },
-  pulse: {
-    width: PULSE_SIZE,
-    height: PULSE_SIZE,
-    borderRadius: PULSE_SIZE / 2,
+  dotShell: {
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  dot: {
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
   },
   beatLabel: {
-    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    minHeight: 36,
+    gap: 2,
   },
   downbeat: {
-    fontSize: 17,
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.4,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
   },
   beatCount: {
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '600',
     fontVariant: ['tabular-nums'],
   },
 });

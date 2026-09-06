@@ -1,0 +1,26 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    text: "Open"
+    optional: true
+- repeat:
+    times: 3
+    while:
+      notVisible: "Start metronome"
+    commands:
+      - tapOn:
+          text: "Metronome"
+          retryTapIfNoChange: true
+- assertVisible: "Time signature, 4/4 selected"
+- repeat:
+    times: 28
+    commands:
+      - tapOn: "Increase beats per measure"
+- repeat:
+    times: 3
+    commands:
+      - tapOn: "Increase beat unit"
+- assertVisible: "Time signature, 32/32 selected"
+- assertVisible: "Start metronome"

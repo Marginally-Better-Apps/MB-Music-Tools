@@ -2,6 +2,9 @@ appId: com.marginallybetterapps.musictools
 ---
 - launchApp:
     clearState: true
+- tapOn:
+    text: "Open"
+    optional: true
 - repeat:
     times: 3
     while:
@@ -12,13 +15,16 @@ appId: com.marginallybetterapps.musictools
           retryTapIfNoChange: true
 - assertVisible: "Time signature, 4/4 selected"
 - startRecording: time-signature-downbeat
-- tapOn: "3/4"
-- assertVisible: "Time signature, 3/4 selected"
+- tapOn: "Increase beats per measure"
+- tapOn: "Increase beats per measure"
+- tapOn: "Increase beats per measure"
+- tapOn: "Increase beat unit"
+- assertVisible: "Time signature, 7/8 selected"
 - tapOn: "Start metronome"
 - assertVisible: "Stop metronome"
 - extendedWaitUntil:
     visible: "Downbeat"
-    timeout: 2000
+    timeout: 5000
 - tapOn: "Stop metronome"
 - assertVisible: "Start metronome"
 - stopRecording

@@ -1,48 +1,49 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import TimeSignatureControl from '@expo/ui/community/segmented-control';
-import {
-  GlassView,
-  isGlassEffectAPIAvailable,
-  isLiquidGlassAvailable,
-} from 'expo-glass-effect';
 
+import { AnimatedGlassButton } from '@/components/animated-glass-button';
 import { MetronomeBeat } from '@/components/metronome-beat';
+import { TimeSignatureEditor } from '@/components/time-signature-editor';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Fonts, Spacing } from '@/constants/theme';
 import { useMetronome } from '@/hooks/use-metronome';
 import { useTheme } from '@/hooks/use-theme';
-import { TIME_SIGNATURES, TimeSignature } from '@/lib/time-signature';
 
 export default function MetronomeScreen() {
   const theme = useTheme();
-  const supportsGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
-  const Surface = supportsGlass ? GlassView : View;
   const metronome = useMetronome();
 
   return (
     <ThemedView style={styles.screen}>
+      <View
+        pointerEvents="none"
+        style={[
+          styles.ambientGlow,
+          styles.ambientGlowTop,
+          { backgroundColor: theme.accentSoft },
+        ]}
+      />
+      <View
+        pointerEvents="none"
+        style={[
+          styles.ambientGlow,
+          styles.ambientGlowBottom,
+          { backgroundColor: theme.accentSoft },
+        ]}
+      />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.tempoRow}>
-          <Pressable
-            accessibilityRole="button"
+          <AnimatedGlassButton
             accessibilityLabel="Decrease tempo"
-            hitSlop={8}
+            contentStyle={styles.stepper}
+            glowColor={theme.accent}
             onPress={metronome.decrease}
-            style={styles.stepperHit}>
-            <Surface
-              testID="tempo-stepper-glass"
-              glassEffectStyle="regular"
-              isInteractive={supportsGlass}
-              tintColor={theme.backgroundElement}
-              style={[
-                styles.stepper,
-                { backgroundColor: supportsGlass ? 'transparent' : theme.backgroundElement },
-              ]}>
-              <ThemedText style={styles.stepperLabel}>−</ThemedText>
-            </Surface>
-          </Pressable>
+            style={styles.stepperHit}
+            testID="tempo-stepper-glass"
+            tintColor={theme.backgroundElement}>
+            <ThemedText style={styles.stepperLabel}>−</ThemedText>
+          </AnimatedGlassButton>
 
           <ThemedText
             accessibilityLabel={`${metronome.displayBpm} BPM`}
@@ -50,40 +51,22 @@ export default function MetronomeScreen() {
             {metronome.displayBpm}
           </ThemedText>
 
-          <Pressable
-            accessibilityRole="button"
+          <AnimatedGlassButton
             accessibilityLabel="Increase tempo"
-            hitSlop={8}
+            contentStyle={styles.stepper}
+            glowColor={theme.accent}
             onPress={metronome.increase}
-            style={styles.stepperHit}>
-            <Surface
-              testID="tempo-stepper-glass"
-              glassEffectStyle="regular"
-              isInteractive={supportsGlass}
-              tintColor={theme.backgroundElement}
-              style={[
-                styles.stepper,
-                { backgroundColor: supportsGlass ? 'transparent' : theme.backgroundElement },
-              ]}>
-              <ThemedText style={styles.stepperLabel}>+</ThemedText>
-            </Surface>
-          </Pressable>
+            style={styles.stepperHit}
+            testID="tempo-stepper-glass"
+            tintColor={theme.backgroundElement}>
+            <ThemedText style={styles.stepperLabel}>+</ThemedText>
+          </AnimatedGlassButton>
         </View>
 
         <View style={styles.signatureGroup}>
-          <ThemedText
-            accessibilityLabel={`Time signature, ${metronome.timeSignature} selected`}
-            style={styles.signatureLabel}>
-            Time signature
-          </ThemedText>
-          <TimeSignatureControl
-            testID="time-signature-control"
-            values={[...TIME_SIGNATURES]}
-            selectedIndex={TIME_SIGNATURES.indexOf(metronome.timeSignature)}
-            onValueChange={(value) =>
-              metronome.selectTimeSignature(value as TimeSignature)
-            }
-            style={styles.signatureControl}
+          <TimeSignatureEditor
+            onChange={metronome.selectTimeSignature}
+            value={metronome.timeSignature}
           />
         </View>
 
@@ -96,47 +79,29 @@ export default function MetronomeScreen() {
         />
 
         <View style={styles.transportRow}>
-          <Pressable
-            accessibilityRole="button"
+          <AnimatedGlassButton
             accessibilityLabel="Tap tempo"
             accessibilityHint="Tap four steady beats to set the tempo"
+            contentStyle={styles.transportControl}
+            glowColor={theme.accent}
             onPress={metronome.tap}
-            style={styles.transportHit}>
-            <Surface
-              testID="tap-tempo-glass"
-              glassEffectStyle="regular"
-              isInteractive={supportsGlass}
-              tintColor={theme.backgroundSelected}
-              style={[
-                styles.transportControl,
-                {
-                  backgroundColor: supportsGlass ? 'transparent' : theme.backgroundSelected,
-                },
-              ]}>
-              <ThemedText style={styles.transportLabel}>Tap</ThemedText>
-            </Surface>
-          </Pressable>
+            style={styles.transportHit}
+            testID="tap-tempo-glass"
+            tintColor={theme.backgroundSelected}>
+            <ThemedText style={styles.transportLabel}>Tap</ThemedText>
+          </AnimatedGlassButton>
 
-          <Pressable
-            accessibilityRole="button"
+          <AnimatedGlassButton
             accessibilityLabel={metronome.playing ? 'Stop metronome' : 'Start metronome'}
+            contentStyle={styles.transportControl}
+            glowColor={theme.accent}
             onPress={metronome.toggle}
-            style={styles.transportHit}>
-            <Surface
-              glassEffectStyle="regular"
-              isInteractive={supportsGlass}
-              tintColor={theme.backgroundSelected}
-              style={[
-                styles.transportControl,
-                {
-                  backgroundColor: supportsGlass ? 'transparent' : theme.backgroundSelected,
-                },
-              ]}>
-              <ThemedText style={styles.transportLabel}>
-                {metronome.playing ? 'Stop' : 'Play'}
-              </ThemedText>
-            </Surface>
-          </Pressable>
+            style={styles.transportHit}
+            tintColor={metronome.playing ? theme.accentSoft : theme.backgroundSelected}>
+            <ThemedText style={styles.transportLabel}>
+              {metronome.playing ? 'Stop' : 'Play'}
+            </ThemedText>
+          </AnimatedGlassButton>
         </View>
       </SafeAreaView>
     </ThemedView>
@@ -146,13 +111,29 @@ export default function MetronomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    overflow: 'hidden',
+  },
+  ambientGlow: {
+    position: 'absolute',
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    opacity: 0.34,
+  },
+  ambientGlowTop: {
+    top: -120,
+    right: -90,
+  },
+  ambientGlowBottom: {
+    bottom: 22,
+    left: -150,
   },
   safeArea: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.four,
-    gap: Spacing.five,
+    gap: Spacing.four,
   },
   tempoRow: {
     flexDirection: 'row',
@@ -171,16 +152,7 @@ const styles = StyleSheet.create({
   },
   signatureGroup: {
     width: '100%',
-    maxWidth: 360,
-    gap: Spacing.two,
-  },
-  signatureLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  signatureControl: {
-    height: 36,
+    maxWidth: 380,
   },
   stepper: {
     width: 64,
@@ -199,10 +171,9 @@ const styles = StyleSheet.create({
   },
   transportRow: {
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 380,
     flexDirection: 'row',
     gap: Spacing.three,
-    marginTop: Spacing.two,
   },
   transportHit: {
     flex: 1,

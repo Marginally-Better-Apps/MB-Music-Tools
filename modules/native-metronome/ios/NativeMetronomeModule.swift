@@ -4,6 +4,8 @@ import UIKit
 
 private let minimumBPM = 30
 private let maximumBPM = 300
+private let minimumBeatsPerMeasure = 1
+private let maximumBeatsPerMeasure = 32
 private let sampleRate = 48_000.0
 private let startLeadTime = 0.04
 
@@ -169,7 +171,7 @@ private final class MetronomeClock {
   }
 
   private func normalizedBeatsPerMeasure(_ beats: Int) -> Int {
-    [2, 3, 4, 6].contains(beats) ? beats : 4
+    min(maximumBeatsPerMeasure, max(minimumBeatsPerMeasure, beats))
   }
 
   private func stopLocked() {

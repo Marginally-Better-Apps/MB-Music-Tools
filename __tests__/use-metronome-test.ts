@@ -112,6 +112,18 @@ describe('useMetronome', () => {
     expect(result.current.beat).toBe(1);
   });
 
+  test('sends a custom beat count to the native clock', async () => {
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => {
+      result.current.selectTimeSignature('7/8');
+    });
+
+    expect(result.current.timeSignature).toBe('7/8');
+    expect(result.current.beatsPerMeasure).toBe(7);
+    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(7);
+  });
+
   test('commits four steady taps and eases the displayed number to the measured tempo', async () => {
     const now = jest.spyOn(Date, 'now');
     const { result } = await renderHook(() => useMetronome());
