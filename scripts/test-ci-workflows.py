@@ -31,10 +31,16 @@ class PullRequestWorkflowTests(unittest.TestCase):
         self.assertNotIn("needs:", scripts_job)
         self.assertNotIn("needs:", ios_job)
 
-    def test_simulator_tests_use_a_runner_with_xcode_16(self) -> None:
-        text = workflow("ci.yml")
-        ios_job = text[text.index("  ios:") :]
-        self.assertIn("runs-on: macos-15", ios_job)
+    def test_native_workflows_use_an_xcode_26_4_compatible_runner(self) -> None:
+        for name in ("ci.yml", "unsigned-ipa.yml", "release.yml"):
+            with self.subTest(workflow=name):
+                text = workflow(name)
+                self.assertIn("runs-on: macos-26", text)
+                self.assertNotIn("runs-on: macos-15", text)
+                self.assertIn("Xcode_26.[4-9]", text)
+                self.assertNotIn("Xcode_27", text)
+
+        ios_job = workflow("ci.yml")[workflow("ci.yml").index("  ios:") :]
         self.assertIn("xcode-select", ios_job)
         self.assertIn("Xcode_26", ios_job)
         self.assertLess(ios_job.index("xcode-select"), ios_job.index("xcodebuild build"))
