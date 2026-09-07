@@ -132,6 +132,10 @@ export function useMetronome() {
       setBeat(0);
       NativeMetronome.setTimeSignature(getBeatsPerMeasure(signature));
     },
+    setTempo(nextBpm: number) {
+      tapTimestampsRef.current = [];
+      updateBpm(nextBpm);
+    },
     increase() {
       tapTimestampsRef.current = [];
       updateBpm(bpmRef.current + 1);

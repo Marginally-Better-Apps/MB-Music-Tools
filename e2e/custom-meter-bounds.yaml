@@ -9,18 +9,19 @@ appId: com.marginallybetterapps.musictools
       - tapOn:
           text: "Metronome"
           retryTapIfNoChange: true
-- assertVisible: "Time signature, 4/4 selected"
+- assertVisible: "Beats per measure, 4"
+- assertVisible: "Beat unit, 4"
 - repeat:
-    times: 3
+    times: 4
     commands:
       - swipe:
-          start: 72%, 41%
-          end: 72%, 10%
-          duration: 900
+          start: 50%, 34%
+          end: 88%, 34%
+          duration: 700
 - swipe:
-    from:
-      text: "Beat unit, 4"
-    direction: UP
-    duration: 650
-- assertVisible: "Time signature, 32/32 selected"
+    start: 50%, 43%
+    end: 88%, 43%
+    duration: 700
+- assertVisible: "Beats per measure, 32"
+- assertVisible: "Beat unit, 32"
 - assertVisible: "Start metronome"

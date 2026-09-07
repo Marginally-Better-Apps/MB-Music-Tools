@@ -9,19 +9,28 @@ appId: com.marginallybetterapps.musictools
       - tapOn:
           text: "Metronome"
           retryTapIfNoChange: true
-- assertVisible: "Time signature, 4/4 selected"
+- assertVisible: "Tempo, 120 BPM"
+- assertVisible: "Beats per measure, 4"
+- assertVisible: "Beat unit, 4"
+- assertNotVisible: "Time signature"
+- assertNotVisible: "Drag numbers"
+- assertNotVisible: "Tap"
 - startRecording: time-signature-drag
-- longPressOn: "Increase tempo"
-- assertNotVisible: "120 BPM"
 - swipe:
-    start: 72%, 41%
-    end: 72%, 33%
-    duration: 700
+    start: 50%, 20%
+    end: 85%, 20%
+    duration: 650
+- assertNotVisible: "Tempo, 120 BPM"
 - swipe:
-    start: 72%, 50%
-    end: 72%, 47%
-    duration: 450
-- assertVisible: "Time signature, 7/8 selected"
+    start: 50%, 34%
+    end: 62%, 34%
+    duration: 650
+- swipe:
+    start: 50%, 43%
+    end: 54%, 43%
+    duration: 500
+- assertVisible: "Beats per measure, 7"
+- assertVisible: "Beat unit, 8"
 - assertNotVisible: "Downbeat"
 - tapOn: "Start metronome"
 - assertVisible: "Stop metronome"

@@ -3,12 +3,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedGlassButton } from '@/components/animated-glass-button';
 import { MetronomeBeat } from '@/components/metronome-beat';
+import { ScrubbableNumber } from '@/components/scrubbable-number';
 import { TimeSignatureEditor } from '@/components/time-signature-editor';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Fonts, Spacing } from '@/constants/theme';
 import { useMetronome } from '@/hooks/use-metronome';
 import { useTheme } from '@/hooks/use-theme';
+
+const TEMPO_VALUES = Array.from({ length: 271 }, (_, index) => index + 30);
 
 export default function MetronomeScreen() {
   const theme = useTheme();
@@ -17,37 +20,16 @@ export default function MetronomeScreen() {
   return (
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.tempoRow}>
-          <AnimatedGlassButton
-            accessibilityLabel="Decrease tempo"
-            contentStyle={styles.stepper}
-            glowColor={theme.accent}
-            onPress={metronome.decrease}
-            repeatOnHold
-            style={styles.stepperHit}
-            testID="tempo-stepper-glass"
-            tintColor={theme.backgroundElement}>
-            <ThemedText style={styles.stepperLabel}>−</ThemedText>
-          </AnimatedGlassButton>
-
-          <ThemedText
-            accessibilityLabel={`${metronome.displayBpm} BPM`}
-            style={styles.bpm}>
-            {metronome.displayBpm}
-          </ThemedText>
-
-          <AnimatedGlassButton
-            accessibilityLabel="Increase tempo"
-            contentStyle={styles.stepper}
-            glowColor={theme.accent}
-            onPress={metronome.increase}
-            repeatOnHold
-            style={styles.stepperHit}
-            testID="tempo-stepper-glass"
-            tintColor={theme.backgroundElement}>
-            <ThemedText style={styles.stepperLabel}>+</ThemedText>
-          </AnimatedGlassButton>
-        </View>
+        <ScrubbableNumber
+          accessibilityLabel={`Tempo, ${metronome.displayBpm} BPM`}
+          displayValue={metronome.displayBpm}
+          onChange={metronome.setTempo}
+          onTap={metronome.tap}
+          style={styles.tempo}
+          textStyle={styles.bpm}
+          value={metronome.bpm}
+          values={TEMPO_VALUES}
+        />
 
         <View style={styles.signatureGroup}>
           <TimeSignatureEditor
@@ -66,23 +48,12 @@ export default function MetronomeScreen() {
 
         <View style={styles.transportRow}>
           <AnimatedGlassButton
-            accessibilityLabel="Tap tempo"
-            accessibilityHint="Tap four steady beats to set the tempo"
-            contentStyle={styles.transportControl}
-            glowColor={theme.accent}
-            onPress={metronome.tap}
-            style={styles.transportHit}
-            testID="tap-tempo-glass"
-            tintColor={theme.backgroundSelected}>
-            <ThemedText style={styles.transportLabel}>Tap</ThemedText>
-          </AnimatedGlassButton>
-
-          <AnimatedGlassButton
             accessibilityLabel={metronome.playing ? 'Stop metronome' : 'Start metronome'}
             contentStyle={styles.transportControl}
             glowColor={theme.accent}
             onPress={metronome.toggle}
             style={styles.transportHit}
+            testID="playback-glass"
             tintColor={metronome.playing ? theme.accentSoft : theme.backgroundSelected}>
             <ThemedText style={styles.transportLabel}>
               {metronome.playing ? 'Stop' : 'Play'}
@@ -106,12 +77,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
   },
-  tempoRow: {
-    width: '100%',
-    maxWidth: 420,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  tempo: {
+    minWidth: 240,
   },
   bpm: {
     fontFamily: Fonts.sans,
@@ -127,26 +94,10 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
   },
-  stepper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperHit: {
-    borderRadius: 32,
-  },
-  stepperLabel: {
-    fontSize: 36,
-    fontWeight: '500',
-    lineHeight: 40,
-  },
   transportRow: {
-    width: '100%',
-    maxWidth: 420,
+    width: 240,
     flexDirection: 'row',
-    gap: Spacing.three,
+    marginBottom: Spacing.four,
   },
   transportHit: {
     flex: 1,

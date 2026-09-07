@@ -28,10 +28,12 @@ describe('<MetronomeScreen />', () => {
     const { getByLabelText, getByText, queryByText } = await render(<MetronomeScreen />);
 
     expect(getByText('120')).toBeTruthy();
+    expect(getByLabelText('Tempo, 120 BPM')).toBeTruthy();
     expect(getByLabelText('Start metronome')).toBeTruthy();
     expect(queryByText('Set a tempo when you are ready.')).toBeNull();
     expect(queryByText('Explore')).toBeNull();
-    expect(getByLabelText('Time signature, 4/4 selected')).toBeTruthy();
+    expect(getByLabelText('Beats per measure, 4')).toBeTruthy();
+    expect(getByLabelText('Beat unit, 4')).toBeTruthy();
   });
 
   test('builds 3/4, shows three beat dots, and makes beat one distinct without a label', async () => {
@@ -51,7 +53,7 @@ describe('<MetronomeScreen />', () => {
     await fireEvent(getByLabelText('Beats per measure, 4'), 'onAccessibilityAction', {
       nativeEvent: { actionName: 'decrement' },
     });
-    expect(getByLabelText('Time signature, 3/4 selected')).toBeTruthy();
+    expect(getByLabelText('Beats per measure, 3')).toBeTruthy();
     expect(getAllByTestId('beat-dot')).toHaveLength(3);
 
     await fireEvent.press(getByLabelText('Start metronome'));
@@ -100,7 +102,8 @@ describe('<MetronomeScreen />', () => {
       nativeEvent: { actionName: 'increment' },
     });
 
-    expect(getByLabelText('Time signature, 7/8 selected')).toBeTruthy();
+    expect(getByLabelText('Beats per measure, 7')).toBeTruthy();
+    expect(getByLabelText('Beat unit, 8')).toBeTruthy();
     expect(getAllByTestId('beat-dot')).toHaveLength(7);
   });
 
@@ -115,20 +118,18 @@ describe('<MetronomeScreen />', () => {
       );
     }
 
-    expect(getByLabelText('Time signature, 32/4 selected')).toBeTruthy();
+    expect(getByLabelText('Beats per measure, 32')).toBeTruthy();
     expect(getAllByTestId('beat-dot')).toHaveLength(32);
   });
 
-  test('renders both meter scrubbers as interactive Liquid Glass', async () => {
-    const { getAllByTestId } = await render(<MetronomeScreen />);
+  test('shows only bare meter numbers with no cards, labels, or instructions', async () => {
+    const { queryAllByTestId, queryByText } = await render(<MetronomeScreen />);
 
-    const meterScrubbers = getAllByTestId('meter-scrubber-glass');
-
-    expect(meterScrubbers).toHaveLength(2);
-    for (const scrubber of meterScrubbers) {
-      expect(scrubber.props.glassEffectStyle).toBe('regular');
-      expect(scrubber.props.isInteractive).toBe(true);
-    }
+    expect(queryByText('Time signature')).toBeNull();
+    expect(queryByText('Drag numbers')).toBeNull();
+    expect(queryByText('BEATS')).toBeNull();
+    expect(queryByText('NOTE VALUE')).toBeNull();
+    expect(queryAllByTestId('meter-scrubber-glass')).toHaveLength(0);
   });
 
   test('keeps the first beat dot visibly larger even while stopped', async () => {
@@ -139,108 +140,70 @@ describe('<MetronomeScreen />', () => {
     expect(dots[1]).toHaveStyle({ width: 20, height: 20 });
   });
 
-  test('plus and minus change BPM by 1 immediately, including while clicking', async () => {
-    const { getByLabelText, getByText } = await render(<MetronomeScreen />);
+  test('removes tempo steppers and Tap so Play is the only bottom control', async () => {
+    const { getByTestId, queryByLabelText, queryByText } = await render(<MetronomeScreen />);
 
-    await fireEvent.press(getByLabelText('Increase tempo'));
-    expect(getByText('121')).toBeTruthy();
-
-    await fireEvent.press(getByLabelText('Decrease tempo'));
-    expect(getByText('120')).toBeTruthy();
-
-    await fireEvent.press(getByLabelText('Start metronome'));
-    await fireEvent.press(getByLabelText('Increase tempo'));
-    expect(getByText('121')).toBeTruthy();
+    expect(queryByLabelText('Increase tempo')).toBeNull();
+    expect(queryByLabelText('Decrease tempo')).toBeNull();
+    expect(queryByLabelText('Tap tempo')).toBeNull();
+    expect(queryByText('Tap')).toBeNull();
+    expect(getByTestId('playback-glass').props.glassEffectStyle).toBe('regular');
   });
 
-  test('holding a tempo stepper repeats and accelerates until release', async () => {
-    jest.useFakeTimers();
-    const { getByLabelText, getByText } = await render(<MetronomeScreen />);
-    const increase = getByLabelText('Increase tempo');
-
-    await fireEvent(increase, 'pressIn');
-    await act(async () => {
-      jest.advanceTimersByTime(420);
-    });
-    expect(getByText('121')).toBeTruthy();
-
-    await act(async () => {
-      jest.advanceTimersByTime(900);
-    });
-    expect(Number(getByLabelText(/ BPM$/).props.accessibilityLabel.split(' ')[0])).toBeGreaterThan(124);
-
-    await fireEvent(increase, 'pressOut');
-    const bpmAfterRelease = getByLabelText(/ BPM$/).props.accessibilityLabel;
-    await act(async () => {
-      jest.advanceTimersByTime(1000);
-    });
-    expect(getByLabelText(/ BPM$/).props.accessibilityLabel).toBe(bpmAfterRelease);
-    jest.useRealTimers();
-  });
-
-  test('renders both tempo steppers as interactive Liquid Glass controls', async () => {
-    const { getAllByTestId } = await render(<MetronomeScreen />);
-
-    const glassSteppers = getAllByTestId('tempo-stepper-glass');
-
-    expect(glassSteppers).toHaveLength(2);
-    for (const stepper of glassSteppers) {
-      expect(stepper.props.glassEffectStyle).toBe('regular');
-      expect(stepper.props.isInteractive).toBe(true);
-    }
-  });
-
-  test('shows a thumb-sized interactive Liquid Glass Tap control beside Play', async () => {
-    const { getByLabelText, getByTestId } = await render(<MetronomeScreen />);
-
-    expect(getByLabelText('Tap tempo')).toBeTruthy();
-    expect(getByTestId('tap-tempo-glass')).toHaveStyle({ minHeight: 94 });
-    expect(getByTestId('tap-tempo-glass').props.glassEffectStyle).toBe('regular');
-    expect(getByTestId('tap-tempo-glass').props.isInteractive).toBe(true);
-  });
-
-  test('waits for four taps, then counts the large BPM label to the measured tempo', async () => {
+  test('repeated taps on the large tempo number set the measured BPM', async () => {
     jest.useFakeTimers();
     let timestamp = 0;
     const now = jest.spyOn(Date, 'now').mockImplementation(() => timestamp);
     const { getByLabelText, getByText } = await render(<MetronomeScreen />);
 
     for (timestamp of [0, 690, 1380]) {
-      await fireEvent.press(getByLabelText('Tap tempo'));
+      await fireEvent(getByLabelText('Tempo, 120 BPM'), 'accessibilityAction', {
+        nativeEvent: { actionName: 'activate' },
+      });
       expect(getByText('120')).toBeTruthy();
     }
 
     timestamp = 2070;
-    await fireEvent.press(getByLabelText('Tap tempo'));
+    await fireEvent(getByLabelText('Tempo, 120 BPM'), 'accessibilityAction', {
+      nativeEvent: { actionName: 'activate' },
+    });
     expect(getByText('120')).toBeTruthy();
 
     await act(async () => {
       jest.advanceTimersByTime(320);
     });
     expect(getByText('87')).toBeTruthy();
-    expect(getByLabelText('87 BPM')).toBeTruthy();
+    expect(getByLabelText('Tempo, 87 BPM')).toBeTruthy();
 
     now.mockRestore();
     jest.useRealTimers();
   });
 
-  test('keeps tempo inside 30 to 300', async () => {
+  test('exposes accessible horizontal tempo adjustment inside 30 to 300', async () => {
     const { getByLabelText, getByText } = await render(<MetronomeScreen />);
 
     for (let step = 0; step < 91; step += 1) {
-      await fireEvent.press(getByLabelText('Decrease tempo'));
+      await fireEvent(getByLabelText(/Tempo, \d+ BPM/), 'accessibilityAction', {
+        nativeEvent: { actionName: 'decrement' },
+      });
     }
     expect(getByText('30')).toBeTruthy();
 
-    await fireEvent.press(getByLabelText('Decrease tempo'));
+    await fireEvent(getByLabelText('Tempo, 30 BPM'), 'accessibilityAction', {
+      nativeEvent: { actionName: 'decrement' },
+    });
     expect(getByText('30')).toBeTruthy();
 
     for (let step = 0; step < 271; step += 1) {
-      await fireEvent.press(getByLabelText('Increase tempo'));
+      await fireEvent(getByLabelText(/Tempo, \d+ BPM/), 'accessibilityAction', {
+        nativeEvent: { actionName: 'increment' },
+      });
     }
     expect(getByText('300')).toBeTruthy();
 
-    await fireEvent.press(getByLabelText('Increase tempo'));
+    await fireEvent(getByLabelText('Tempo, 300 BPM'), 'accessibilityAction', {
+      nativeEvent: { actionName: 'increment' },
+    });
     expect(getByText('300')).toBeTruthy();
   });
 });
