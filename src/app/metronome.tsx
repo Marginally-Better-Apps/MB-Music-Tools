@@ -16,22 +16,6 @@ export default function MetronomeScreen() {
 
   return (
     <ThemedView style={styles.screen}>
-      <View
-        pointerEvents="none"
-        style={[
-          styles.ambientGlow,
-          styles.ambientGlowTop,
-          { backgroundColor: theme.accentSoft },
-        ]}
-      />
-      <View
-        pointerEvents="none"
-        style={[
-          styles.ambientGlow,
-          styles.ambientGlowBottom,
-          { backgroundColor: theme.accentSoft },
-        ]}
-      />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.tempoRow}>
           <AnimatedGlassButton
@@ -39,6 +23,7 @@ export default function MetronomeScreen() {
             contentStyle={styles.stepper}
             glowColor={theme.accent}
             onPress={metronome.decrease}
+            repeatOnHold
             style={styles.stepperHit}
             testID="tempo-stepper-glass"
             tintColor={theme.backgroundElement}>
@@ -56,6 +41,7 @@ export default function MetronomeScreen() {
             contentStyle={styles.stepper}
             glowColor={theme.accent}
             onPress={metronome.increase}
+            repeatOnHold
             style={styles.stepperHit}
             testID="tempo-stepper-glass"
             tintColor={theme.backgroundElement}>
@@ -113,38 +99,25 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
-  ambientGlow: {
-    position: 'absolute',
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    opacity: 0.34,
-  },
-  ambientGlowTop: {
-    top: -120,
-    right: -90,
-  },
-  ambientGlowBottom: {
-    bottom: 22,
-    left: -150,
-  },
   safeArea: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-evenly',
     paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    paddingVertical: Spacing.two,
   },
   tempoRow: {
+    width: '100%',
+    maxWidth: 420,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.four,
+    justifyContent: 'space-between',
   },
   bpm: {
     fontFamily: Fonts.sans,
-    fontSize: 96,
+    fontSize: 104,
     fontWeight: '600',
-    lineHeight: 104,
+    lineHeight: 112,
     letterSpacing: -2,
     minWidth: 180,
     textAlign: 'center',
@@ -152,7 +125,7 @@ const styles = StyleSheet.create({
   },
   signatureGroup: {
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 420,
   },
   stepper: {
     width: 64,
@@ -171,7 +144,7 @@ const styles = StyleSheet.create({
   },
   transportRow: {
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 420,
     flexDirection: 'row',
     gap: Spacing.three,
   },
@@ -181,7 +154,7 @@ const styles = StyleSheet.create({
   },
   transportControl: {
     width: '100%',
-    minHeight: 88,
+    minHeight: 94,
     paddingHorizontal: Spacing.four,
     borderRadius: 44,
     alignItems: 'center',

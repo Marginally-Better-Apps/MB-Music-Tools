@@ -1,10 +1,6 @@
 appId: com.marginallybetterapps.musictools
 ---
-- launchApp:
-    clearState: true
-- tapOn:
-    text: "Open"
-    optional: true
+- launchApp
 - repeat:
     times: 3
     while:
@@ -15,12 +11,16 @@ appId: com.marginallybetterapps.musictools
           retryTapIfNoChange: true
 - assertVisible: "Time signature, 4/4 selected"
 - repeat:
-    times: 28
-    commands:
-      - tapOn: "Increase beats per measure"
-- repeat:
     times: 3
     commands:
-      - tapOn: "Increase beat unit"
+      - swipe:
+          start: 72%, 41%
+          end: 72%, 10%
+          duration: 900
+- swipe:
+    from:
+      text: "Beat unit, 4"
+    direction: UP
+    duration: 650
 - assertVisible: "Time signature, 32/32 selected"
 - assertVisible: "Start metronome"

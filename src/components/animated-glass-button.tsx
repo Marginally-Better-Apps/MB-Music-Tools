@@ -1,7 +1,6 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  GestureResponderEvent,
   PanResponder,
   Pressable,
   StyleProp,
@@ -16,6 +15,9 @@ import {
 } from 'expo-glass-effect';
 
 const DRAG_LIMIT = 8;
+const HOLD_DELAY_MS = 420;
+const REPEAT_START_MS = 230;
+const REPEAT_MIN_MS = 70;
 
 type AnimatedGlassButtonProps = {
   accessibilityHint?: string;
@@ -24,7 +26,8 @@ type AnimatedGlassButtonProps = {
   contentStyle?: StyleProp<ViewStyle>;
   disabled?: boolean;
   glowColor: string;
-  onPress: (event: GestureResponderEvent) => void;
+  onPress: () => void;
+  repeatOnHold?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
   tintColor: string;
@@ -38,6 +41,7 @@ export function AnimatedGlassButton({
   disabled = false,
   glowColor,
   onPress,
+  repeatOnHold = false,
   style,
   testID,
   tintColor,
@@ -47,6 +51,61 @@ export function AnimatedGlassButton({
   const [drag] = useState(() => new Animated.ValueXY());
   const [scale] = useState(() => new Animated.Value(1));
   const [glow] = useState(() => new Animated.Value(0));
+  const holdDelay = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const repeatTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHolding = useRef(false);
+  const didRepeat = useRef(false);
+  const repeatCount = useRef(0);
+  const onPressRef = useRef(onPress);
+
+  useEffect(() => {
+    onPressRef.current = onPress;
+  }, [onPress]);
+
+  const clearHoldTimers = () => {
+    if (holdDelay.current) clearTimeout(holdDelay.current);
+    if (repeatTimer.current) clearTimeout(repeatTimer.current);
+    holdDelay.current = null;
+    repeatTimer.current = null;
+  };
+
+  const scheduleRepeat = () => {
+    const delay = Math.max(REPEAT_MIN_MS, REPEAT_START_MS - repeatCount.current * 24);
+    repeatTimer.current = setTimeout(() => {
+      if (!isHolding.current) return;
+      didRepeat.current = true;
+      repeatCount.current += 1;
+      onPressRef.current();
+      scheduleRepeat();
+    }, delay);
+  };
+
+  const startHold = () => {
+    if (!repeatOnHold || disabled) return;
+    clearHoldTimers();
+    isHolding.current = true;
+    didRepeat.current = false;
+    repeatCount.current = 0;
+    holdDelay.current = setTimeout(() => {
+      if (!isHolding.current) return;
+      didRepeat.current = true;
+      onPressRef.current();
+      scheduleRepeat();
+    }, HOLD_DELAY_MS);
+  };
+
+  const stopHold = () => {
+    isHolding.current = false;
+    clearHoldTimers();
+  };
+
+  useEffect(
+    () => () => {
+      if (holdDelay.current) clearTimeout(holdDelay.current);
+      if (repeatTimer.current) clearTimeout(repeatTimer.current);
+    },
+    []
+  );
 
   const animatePressed = (pressed: boolean) => {
     Animated.spring(scale, {
@@ -64,6 +123,7 @@ export function AnimatedGlassButton({
   };
 
   const returnToRest = () => {
+    stopHold();
     Animated.spring(drag, {
       toValue: { x: 0, y: 0 },
       damping: 12,
@@ -74,6 +134,8 @@ export function AnimatedGlassButton({
     animatePressed(false);
   };
 
+  // The responder callbacks read refs only after a gesture begins.
+  // eslint-disable-next-line react-hooks/refs
   const [panResponder] = useState(() =>
       PanResponder.create({
         onMoveShouldSetPanResponder: (_, gesture) =>
@@ -116,8 +178,14 @@ export function AnimatedGlassButton({
           accessibilityLabel={accessibilityLabel}
           accessibilityRole="button"
           disabled={disabled}
-          onPress={onPress}
-          onPressIn={() => animatePressed(true)}
+          onPress={() => {
+            if (!didRepeat.current) onPressRef.current();
+          }}
+          onPressIn={() => {
+            didRepeat.current = false;
+            animatePressed(true);
+            startHold();
+          }}
           onPressOut={returnToRest}
           style={styles.pressable}>
           <Surface

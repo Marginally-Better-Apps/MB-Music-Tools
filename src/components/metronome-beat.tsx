@@ -6,11 +6,11 @@ import {
   isLiquidGlassAvailable,
 } from 'expo-glass-effect';
 
-import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { TimeSignature } from '@/lib/time-signature';
 
-const DOT_SIZE = 22;
+const DOT_SIZE = 20;
+const FIRST_DOT_SIZE = 30;
 
 type MetronomeBeatProps = {
   beat: number;
@@ -59,7 +59,7 @@ export function MetronomeBeat({
 
   const activeScale = pulse.interpolate({
     inputRange: [0, 1],
-    outputRange: [1.12, isDownbeat ? 1.58 : 1.42],
+    outputRange: [1, isDownbeat ? 1.52 : 1.4],
   });
 
   const accessibilityValue = !playing
@@ -71,7 +71,7 @@ export function MetronomeBeat({
   return (
     <View
       accessible
-      accessibilityLabel={isDownbeat ? 'Downbeat' : 'Metronome beat'}
+      accessibilityLabel="Metronome beat"
       accessibilityValue={{ text: accessibilityValue }}
       style={styles.stage}>
       <View style={styles.dotField}>
@@ -85,6 +85,11 @@ export function MetronomeBeat({
               key={dotBeat}
               style={[
                 styles.dotShell,
+                {
+                  width: isFirst ? FIRST_DOT_SIZE : DOT_SIZE,
+                  height: isFirst ? FIRST_DOT_SIZE : DOT_SIZE,
+                  borderRadius: isFirst ? FIRST_DOT_SIZE / 2 : DOT_SIZE / 2,
+                },
                 isActive && {
                   shadowColor: theme.accent,
                   shadowOpacity: isDownbeat ? 0.72 : 0.52,
@@ -99,11 +104,16 @@ export function MetronomeBeat({
                 style={[
                   styles.dot,
                   {
+                    width: isFirst ? FIRST_DOT_SIZE : DOT_SIZE,
+                    height: isFirst ? FIRST_DOT_SIZE : DOT_SIZE,
+                    borderRadius: isFirst ? FIRST_DOT_SIZE / 2 : DOT_SIZE / 2,
                     backgroundColor: supportsGlass
                       ? 'transparent'
                       : isActive
                         ? theme.accent
-                        : theme.backgroundElement,
+                        : isFirst
+                          ? theme.backgroundSelected
+                          : theme.backgroundElement,
                     borderColor: isFirst ? theme.accent : theme.textSecondary,
                     borderWidth: isFirst ? 1.5 : StyleSheet.hairlineWidth,
                   },
@@ -113,16 +123,6 @@ export function MetronomeBeat({
           );
         })}
       </View>
-      <View pointerEvents="none" style={styles.beatLabel}>
-        {isDownbeat ? (
-          <ThemedText style={[styles.downbeat, { color: theme.accent }]}>
-            Downbeat
-          </ThemedText>
-        ) : null}
-        <ThemedText style={[styles.beatCount, { color: theme.textSecondary }]}>
-          {playing && beat > 0 ? `Beat ${beat} of ${beatsPerMeasure}` : timeSignature}
-        </ThemedText>
-      </View>
     </View>
   );
 }
@@ -130,10 +130,9 @@ export function MetronomeBeat({
 const styles = StyleSheet.create({
   stage: {
     width: '100%',
-    minHeight: 104,
+    minHeight: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 18,
   },
   dotField: {
     width: '100%',
@@ -145,31 +144,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   dotShell: {
-    width: DOT_SIZE,
-    height: DOT_SIZE,
-    borderRadius: DOT_SIZE / 2,
     shadowOffset: { width: 0, height: 2 },
   },
   dot: {
-    width: DOT_SIZE,
-    height: DOT_SIZE,
-    borderRadius: DOT_SIZE / 2,
-  },
-  beatLabel: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 36,
-    gap: 2,
-  },
-  downbeat: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.7,
-    textTransform: 'uppercase',
-  },
-  beatCount: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontVariant: ['tabular-nums'],
+    overflow: 'hidden',
   },
 });

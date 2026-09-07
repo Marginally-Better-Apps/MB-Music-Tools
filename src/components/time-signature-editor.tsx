@@ -1,101 +1,208 @@
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, PanResponder, StyleSheet, View } from 'react-native';
+import {
+  GlassView,
+  isGlassEffectAPIAvailable,
+  isLiquidGlassAvailable,
+} from 'expo-glass-effect';
 
-import { AnimatedGlassButton } from '@/components/animated-glass-button';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
-  changeBeatCount,
-  changeBeatUnit,
+  BEAT_UNITS,
   getBeatUnit,
   getBeatsPerMeasure,
+  MAX_BEATS_PER_MEASURE,
+  MIN_BEATS_PER_MEASURE,
   TimeSignature,
 } from '@/lib/time-signature';
+
+const DRAG_POINTS_PER_STEP = 24;
+const NUMERATOR_VALUES = Array.from(
+  { length: MAX_BEATS_PER_MEASURE - MIN_BEATS_PER_MEASURE + 1 },
+  (_, index) => index + MIN_BEATS_PER_MEASURE
+);
 
 type TimeSignatureEditorProps = {
   onChange: (signature: TimeSignature) => void;
   value: TimeSignature;
 };
 
-type MeterValueProps = {
-  decreaseLabel: string;
-  increaseLabel: string;
+type MeterScrubberProps = {
+  accessibilityName: string;
   label: string;
-  onDecrease: () => void;
-  onIncrease: () => void;
+  onChange: (value: number) => void;
+  values: readonly number[];
   value: number;
 };
 
-function MeterValue({
-  decreaseLabel,
-  increaseLabel,
+function MeterScrubber({
+  accessibilityName,
   label,
-  onDecrease,
-  onIncrease,
+  onChange,
+  values,
   value,
-}: MeterValueProps) {
+}: MeterScrubberProps) {
   const theme = useTheme();
+  const supportsGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
+  const Surface = supportsGlass ? GlassView : View;
+  const [drag] = useState(() => new Animated.Value(0));
+  const [scale] = useState(() => new Animated.Value(1));
+  const startIndex = useRef(0);
+  const lastIndex = useRef(0);
+  const valueRef = useRef(value);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    valueRef.current = value;
+    onChangeRef.current = onChange;
+  }, [onChange, value]);
+
+  const changeBy = (direction: -1 | 1) => {
+    const currentIndex = values.indexOf(valueRef.current);
+    const nextIndex = Math.max(0, Math.min(values.length - 1, currentIndex + direction));
+    if (nextIndex !== currentIndex) onChangeRef.current(values[nextIndex]);
+  };
+
+  const returnToRest = () => {
+    Animated.parallel([
+      Animated.spring(drag, {
+        toValue: 0,
+        damping: 13,
+        stiffness: 240,
+        mass: 0.6,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        damping: 14,
+        stiffness: 260,
+        mass: 0.55,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  // The responder callbacks read refs only after a gesture begins.
+  // eslint-disable-next-line react-hooks/refs
+  const [panResponder] = useState(() =>
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 3,
+      onPanResponderGrant: () => {
+        startIndex.current = values.indexOf(valueRef.current);
+        lastIndex.current = startIndex.current;
+        Animated.spring(scale, {
+          toValue: 1.045,
+          damping: 16,
+          stiffness: 300,
+          mass: 0.45,
+          useNativeDriver: true,
+        }).start();
+      },
+      onPanResponderMove: (_, gesture) => {
+        const stepOffset = Math.round(-gesture.dy / DRAG_POINTS_PER_STEP);
+        const nextIndex = Math.max(
+          0,
+          Math.min(values.length - 1, startIndex.current + stepOffset)
+        );
+        drag.setValue(Math.max(-10, Math.min(10, gesture.dy * 0.12)));
+        if (nextIndex !== lastIndex.current) {
+          lastIndex.current = nextIndex;
+          onChangeRef.current(values[nextIndex]);
+        }
+      },
+      onPanResponderRelease: returnToRest,
+      onPanResponderTerminate: returnToRest,
+    })
+  );
 
   return (
-    <View style={styles.valueGroup}>
-      <View style={styles.valueRow}>
-        <AnimatedGlassButton
-          accessibilityLabel={decreaseLabel}
-          contentStyle={styles.adjustButton}
-          glowColor={theme.accent}
-          onPress={onDecrease}
-          testID="meter-editor-glass"
-          tintColor={theme.backgroundElement}>
-          <ThemedText style={styles.adjustLabel}>−</ThemedText>
-        </AnimatedGlassButton>
-        <ThemedText style={styles.meterValue}>{value}</ThemedText>
-        <AnimatedGlassButton
-          accessibilityLabel={increaseLabel}
-          contentStyle={styles.adjustButton}
-          glowColor={theme.accent}
-          onPress={onIncrease}
-          testID="meter-editor-glass"
-          tintColor={theme.backgroundElement}>
-          <ThemedText style={styles.adjustLabel}>+</ThemedText>
-        </AnimatedGlassButton>
-      </View>
-      <ThemedText style={[styles.valueLabel, { color: theme.textSecondary }]}>
-        {label}
-      </ThemedText>
+    <View
+      accessible
+      accessibilityActions={[
+        { name: 'increment', label: `Increase ${accessibilityName.toLowerCase()}` },
+        { name: 'decrement', label: `Decrease ${accessibilityName.toLowerCase()}` },
+      ]}
+      accessibilityHint="Drag up or down to adjust"
+      accessibilityLabel={`${accessibilityName}, ${value}`}
+      accessibilityRole="adjustable"
+      accessibilityValue={{ min: values[0], max: values[values.length - 1], now: value }}
+      onAccessibilityAction={(event) => {
+        if (event.nativeEvent.actionName === 'increment') changeBy(1);
+        if (event.nativeEvent.actionName === 'decrement') changeBy(-1);
+      }}
+      style={styles.accessibleScrubber}>
+      <Animated.View
+        style={[
+          styles.scrubberShell,
+          {
+            shadowColor: theme.accent,
+            transform: [{ translateY: drag }, { scale }],
+          },
+        ]}
+        {...panResponder.panHandlers}>
+        <Surface
+          glassEffectStyle="regular"
+          isInteractive={supportsGlass}
+          testID="meter-scrubber-glass"
+          tintColor={theme.backgroundElement}
+          style={[
+            styles.scrubber,
+            { backgroundColor: supportsGlass ? 'transparent' : theme.backgroundElement },
+          ]}>
+          <ThemedText style={[styles.scrubberLabel, { color: theme.textSecondary }]}>
+            {label}
+          </ThemedText>
+          <ThemedText style={styles.scrubberValue}>{value}</ThemedText>
+          <View pointerEvents="none" style={styles.dragRail}>
+            <View style={[styles.railTick, { backgroundColor: theme.textSecondary }]} />
+            <View
+              style={[
+                styles.railTick,
+                styles.railTickWide,
+                { backgroundColor: theme.accent },
+              ]}
+            />
+            <View style={[styles.railTick, { backgroundColor: theme.textSecondary }]} />
+          </View>
+        </Surface>
+      </Animated.View>
     </View>
   );
 }
 
 export function TimeSignatureEditor({ onChange, value }: TimeSignatureEditorProps) {
+  const theme = useTheme();
+  const beats = getBeatsPerMeasure(value);
+  const unit = getBeatUnit(value);
+
   return (
     <View style={styles.editor}>
       <View style={styles.header}>
         <ThemedText
           accessibilityLabel={`Time signature, ${value} selected`}
           style={styles.title}>
-          Custom meter
+          Time signature
         </ThemedText>
-        <ThemedText style={styles.readout}>{value}</ThemedText>
+        <ThemedText style={[styles.hint, { color: theme.textSecondary }]}>Drag numbers</ThemedText>
       </View>
-      <View style={styles.controls}>
-        <MeterValue
-          decreaseLabel="Decrease beats per measure"
-          increaseLabel="Increase beats per measure"
-          label="beats"
-          onDecrease={() => onChange(changeBeatCount(value, -1))}
-          onIncrease={() => onChange(changeBeatCount(value, 1))}
-          value={getBeatsPerMeasure(value)}
+      <View style={styles.fraction}>
+        <MeterScrubber
+          accessibilityName="Beats per measure"
+          label="BEATS"
+          onChange={(nextBeats) => onChange(`${nextBeats}/${unit}`)}
+          value={beats}
+          values={NUMERATOR_VALUES}
         />
-        <ThemedText accessibilityElementsHidden style={styles.slash}>
-          /
-        </ThemedText>
-        <MeterValue
-          decreaseLabel="Decrease beat unit"
-          increaseLabel="Increase beat unit"
-          label="note value"
-          onDecrease={() => onChange(changeBeatUnit(value, -1))}
-          onIncrease={() => onChange(changeBeatUnit(value, 1))}
-          value={getBeatUnit(value)}
+        <View style={[styles.fractionBar, { backgroundColor: theme.text }]} />
+        <MeterScrubber
+          accessibilityName="Beat unit"
+          label="NOTE VALUE"
+          onChange={(nextUnit) => onChange(`${beats}/${nextUnit}`)}
+          value={unit}
+          values={BEAT_UNITS}
         />
       </View>
     </View>
@@ -105,7 +212,7 @@ export function TimeSignatureEditor({ onChange, value }: TimeSignatureEditorProp
 const styles = StyleSheet.create({
   editor: {
     width: '100%',
-    gap: Spacing.three,
+    gap: Spacing.two,
   },
   header: {
     flexDirection: 'row',
@@ -114,58 +221,70 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.one,
   },
   title: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
   },
-  readout: {
-    fontSize: 17,
-    fontWeight: '700',
-    fontVariant: ['tabular-nums'],
+  hint: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.35,
+    textTransform: 'uppercase',
   },
-  controls: {
+  fraction: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  fractionBar: {
+    width: 94,
+    height: 2,
+    borderRadius: 1,
+    opacity: 0.72,
+  },
+  accessibleScrubber: {
+    width: '100%',
+  },
+  scrubberShell: {
+    width: '100%',
+    borderRadius: 28,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.13,
+    shadowRadius: 10,
+  },
+  scrubber: {
+    width: '100%',
+    height: 68,
+    borderRadius: 28,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    gap: Spacing.two,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.four,
   },
-  valueGroup: {
+  scrubberLabel: {
     flex: 1,
-    alignItems: 'center',
-    gap: Spacing.two,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
-  valueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.two,
-  },
-  adjustButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  adjustLabel: {
-    fontSize: 25,
-    fontWeight: '500',
-    lineHeight: 28,
-  },
-  meterValue: {
-    width: 34,
-    height: 44,
-    fontSize: 28,
+  scrubberValue: {
+    minWidth: 82,
+    fontSize: 42,
     fontWeight: '600',
-    lineHeight: 44,
+    lineHeight: 48,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },
-  valueLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.4,
+  dragRail: {
+    width: 22,
+    alignItems: 'flex-end',
+    gap: 4,
   },
-  slash: {
-    marginTop: 5,
-    fontSize: 32,
-    fontWeight: '300',
+  railTick: {
+    width: 11,
+    height: 2,
+    borderRadius: 1,
+    opacity: 0.46,
+  },
+  railTickWide: {
+    width: 18,
+    opacity: 0.85,
   },
 });
