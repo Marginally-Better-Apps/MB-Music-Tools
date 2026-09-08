@@ -11,10 +11,13 @@ import {
 import {
   DEFAULT_TIME_SIGNATURE,
   getBeatsPerMeasure,
-  getBeatUnit,
-  getPulseIntervalMultiplier,
   TimeSignature,
 } from '@/lib/time-signature';
+import {
+  DEFAULT_SUBDIVISION,
+  Subdivision,
+  subdivisionIntervalMs,
+} from '@/lib/subdivision';
 import { NativeMetronome } from '@/native/metronome';
 
 const TAP_TEMPO_RESET_MS = 2000;
@@ -29,9 +32,11 @@ export function useMetronome() {
   const [beatPhase, setBeatPhase] = useState(0);
   const [beatPhaseCount, setBeatPhaseCount] = useState(1);
   const [timeSignature, setTimeSignature] = useState<TimeSignature>(DEFAULT_TIME_SIGNATURE);
+  const [subdivision, setSubdivision] = useState<Subdivision>(DEFAULT_SUBDIVISION);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const bpmRef = useRef(bpm);
   const timeSignatureRef = useRef(timeSignature);
+  const subdivisionRef = useRef(subdivision);
   const displayBpmRef = useRef(displayBpm);
   const tapTimestampsRef = useRef<number[]>([]);
   const animationRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -116,9 +121,9 @@ export function useMetronome() {
     beatPhaseCount,
     beatsPerMeasure: getBeatsPerMeasure(timeSignature),
     playing,
+    subdivision,
     timeSignature,
-    intervalMs:
-      bpmToIntervalMs(bpm) * getPulseIntervalMultiplier(getBeatUnit(timeSignature)),
+    intervalMs: subdivisionIntervalMs(bpmToIntervalMs(bpm), subdivision),
     toggle() {
       setPlaying((current) => {
         if (current) {
@@ -131,7 +136,7 @@ export function useMetronome() {
         NativeMetronome.start(
           bpmRef.current,
           getBeatsPerMeasure(timeSignatureRef.current),
-          getBeatUnit(timeSignatureRef.current)
+          subdivisionRef.current
         );
         return true;
       });
@@ -141,11 +146,16 @@ export function useMetronome() {
       setTimeSignature(signature);
       setBeat(0);
       setBeatPhase(0);
-      setBeatPhaseCount(1);
-      NativeMetronome.setTimeSignature(
-        getBeatsPerMeasure(signature),
-        getBeatUnit(signature)
-      );
+      setBeatPhaseCount(subdivisionRef.current);
+      NativeMetronome.setTimeSignature(getBeatsPerMeasure(signature));
+    },
+    selectSubdivision(nextSubdivision: Subdivision) {
+      subdivisionRef.current = nextSubdivision;
+      setSubdivision(nextSubdivision);
+      setBeat(0);
+      setBeatPhase(0);
+      setBeatPhaseCount(nextSubdivision);
+      NativeMetronome.setSubdivision(nextSubdivision);
     },
     setTempo(nextBpm: number) {
       tapTimestampsRef.current = [];

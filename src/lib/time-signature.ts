@@ -27,14 +27,6 @@ export function getNoteTypeName(unit: number): string {
   return NOTE_TYPE_NAMES[unit] ?? `${unit}th note`;
 }
 
-export function getBeatPhaseCount(unit: number): number {
-  return Math.max(1, Math.floor(4 / unit));
-}
-
-export function getPulseIntervalMultiplier(unit: number): number {
-  return Math.min(1, 4 / unit);
-}
-
 export function changeBeatCount(
   signature: TimeSignature,
   direction: -1 | 1

@@ -8,6 +8,7 @@ jest.mock('@/native/metronome', () => ({
     stop: jest.fn(),
     setTempo: jest.fn(),
     setTimeSignature: jest.fn(),
+    setSubdivision: jest.fn(),
     addListener: jest.fn(() => ({ remove: jest.fn() })),
   },
 }));
@@ -37,6 +38,8 @@ describe('<MetronomeScreen />', () => {
     expect(getByLabelText('Beats per measure, 4')).toBeTruthy();
     expect(getByLabelText('Note type, quarter note')).toBeTruthy();
     expect(getByTestId('note-value-glyph-4')).toBeTruthy();
+    expect(getByLabelText('Subdivision, quarter notes')).toBeTruthy();
+    expect(getByTestId('subdivision-glyph-1')).toBeTruthy();
   });
 
   test('builds 3/4, shows three beat dots, and makes beat one distinct without a label', async () => {
@@ -143,7 +146,7 @@ describe('<MetronomeScreen />', () => {
     expect(queryAllByTestId('meter-scrubber-glass')).toHaveLength(0);
   });
 
-  test('shows half-note timing as two growth phases without visible helper text', async () => {
+  test('shows triplets as a separate notation control and three growth phases', async () => {
     const nativeMetronome = jest.requireMock('@/native/metronome').NativeMetronome;
     let beatListener:
       | ((event: { beat: number; phase: number; phaseCount: number }) => void)
@@ -161,25 +164,31 @@ describe('<MetronomeScreen />', () => {
       <MetronomeScreen />
     );
 
-    await fireEvent(getByLabelText('Note type, quarter note'), 'accessibilityAction', {
-      nativeEvent: { actionName: 'decrement' },
-    });
-    expect(getByTestId('note-value-glyph-2')).toBeTruthy();
-    expect(queryByText('Half note')).toBeNull();
+    for (let step = 0; step < 2; step += 1) {
+      await fireEvent(
+        getByLabelText(step === 0 ? 'Subdivision, quarter notes' : 'Subdivision, eighth notes'),
+        'accessibilityAction',
+        { nativeEvent: { actionName: 'increment' } }
+      );
+    }
+    expect(getByLabelText('Subdivision, eighth-note triplets')).toBeTruthy();
+    expect(getByTestId('subdivision-glyph-3')).toBeTruthy();
+    expect(getByLabelText('Note type, quarter note')).toBeTruthy();
+    expect(queryByText('Triplets')).toBeNull();
 
     await fireEvent.press(getByLabelText('Start metronome'));
     await act(async () => {
-      beatListener?.({ beat: 1, phase: 1, phaseCount: 2 });
+      beatListener?.({ beat: 1, phase: 1, phaseCount: 3 });
     });
     expect(getByLabelText('Metronome beat').props.accessibilityValue).toEqual({
-      text: 'Beat 1 of 4, pulse 1 of 2, 4/2',
+      text: 'Beat 1 of 4, pulse 1 of 3, 4/4',
     });
 
     await act(async () => {
-      beatListener?.({ beat: 1, phase: 2, phaseCount: 2 });
+      beatListener?.({ beat: 1, phase: 3, phaseCount: 3 });
     });
     expect(getByLabelText('Metronome beat').props.accessibilityValue).toEqual({
-      text: 'Beat 1 of 4, pulse 2 of 2, 4/2',
+      text: 'Beat 1 of 4, pulse 3 of 3, 4/4',
     });
   });
 

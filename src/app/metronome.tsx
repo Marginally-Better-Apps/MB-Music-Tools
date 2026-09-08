@@ -4,12 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnimatedGlassButton } from '@/components/animated-glass-button';
 import { MetronomeBeat } from '@/components/metronome-beat';
 import { ScrubbableNumber } from '@/components/scrubbable-number';
+import { SubdivisionEditor } from '@/components/subdivision-editor';
 import { TimeSignatureEditor } from '@/components/time-signature-editor';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Fonts, Spacing } from '@/constants/theme';
 import { useMetronome } from '@/hooks/use-metronome';
 import { useTheme } from '@/hooks/use-theme';
+import { getBeatUnit } from '@/lib/time-signature';
 
 const TEMPO_VALUES = Array.from({ length: 271 }, (_, index) => index + 30);
 
@@ -37,6 +39,12 @@ export default function MetronomeScreen() {
             value={metronome.timeSignature}
           />
         </View>
+
+        <SubdivisionEditor
+          beatUnit={getBeatUnit(metronome.timeSignature)}
+          onChange={metronome.selectSubdivision}
+          value={metronome.subdivision}
+        />
 
         <MetronomeBeat
           beat={metronome.beat}

@@ -18,7 +18,7 @@ const DRAG_LIMIT = 18;
 type ScrubbableNumberProps = {
   accessibilityLabel: string;
   displayAccessory?: ReactNode;
-  displayValue?: number | string;
+  displayValue?: number | string | null;
   onChange: (value: number) => void;
   onTap?: () => void;
   style?: StyleProp<ViewStyle>;
@@ -47,6 +47,7 @@ export function ScrubbableNumber({
   const valueRef = useRef(value);
   const onChangeRef = useRef(onChange);
   const onTapRef = useRef(onTap);
+  const resolvedDisplayValue = displayValue === undefined ? value : displayValue;
 
   useEffect(() => {
     valueRef.current = value;
@@ -154,7 +155,9 @@ export function ScrubbableNumber({
         ]}
         {...panResponder.panHandlers}>
         <View style={styles.displayRow}>
-          <ThemedText style={[styles.number, textStyle]}>{displayValue ?? value}</ThemedText>
+          {resolvedDisplayValue !== null && (
+            <ThemedText style={[styles.number, textStyle]}>{resolvedDisplayValue}</ThemedText>
+          )}
           {displayAccessory}
         </View>
       </Animated.View>

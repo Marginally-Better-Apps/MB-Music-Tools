@@ -6,7 +6,7 @@ private let minimumBPM = 30
 private let maximumBPM = 300
 private let minimumBeatsPerMeasure = 1
 private let maximumBeatsPerMeasure = 32
-private let supportedBeatUnits = [1, 2, 4, 8, 16, 32]
+private let supportedSubdivisions = [1, 2, 3, 4]
 private let sampleRate = 48_000.0
 private let startLeadTime = 0.04
 
@@ -31,7 +31,7 @@ private final class MetronomeClock {
   private var beat = 0
   private var phase = 0
   private var beatsPerMeasure = 4
-  private var beatUnit = 4
+  private var subdivision = 1
   private var currentBPM = 120
 
   init() {
@@ -43,7 +43,7 @@ private final class MetronomeClock {
   func start(
     bpm: Int,
     beatsPerMeasure: Int,
-    beatUnit: Int,
+    subdivision: Int,
     onBeat: @escaping (Int, Int, Int) -> Void
   ) {
     clockQueue.async { [weak self] in
@@ -52,7 +52,7 @@ private final class MetronomeClock {
       self.beat = 0
       self.phase = 0
       self.beatsPerMeasure = self.normalizedBeatsPerMeasure(beatsPerMeasure)
-      self.beatUnit = self.normalizedBeatUnit(beatUnit)
+      self.subdivision = self.normalizedSubdivision(subdivision)
       self.isPlaying = true
 
       do {
@@ -86,11 +86,26 @@ private final class MetronomeClock {
     }
   }
 
-  func setTimeSignature(_ beatsPerMeasure: Int, beatUnit: Int) {
+  func setTimeSignature(_ beatsPerMeasure: Int) {
     clockQueue.async { [weak self] in
       guard let self else { return }
       self.beatsPerMeasure = self.normalizedBeatsPerMeasure(beatsPerMeasure)
-      self.beatUnit = self.normalizedBeatUnit(beatUnit)
+      self.beat = 0
+      self.phase = 0
+      guard self.isPlaying else { return }
+
+      let now = DispatchTime.now().uptimeNanoseconds
+      let scheduled = self.nextBeatDeadline?.uptimeNanoseconds ?? now
+      let delayNanoseconds = scheduled > now ? scheduled - now : 0
+      let delay = max(startLeadTime, Double(delayNanoseconds) / 1_000_000_000)
+      self.beginLoop(bpm: self.currentBPM, after: delay)
+    }
+  }
+
+  func setSubdivision(_ subdivision: Int) {
+    clockQueue.async { [weak self] in
+      guard let self else { return }
+      self.subdivision = self.normalizedSubdivision(subdivision)
       self.beat = 0
       self.phase = 0
       guard self.isPlaying else { return }
@@ -112,8 +127,7 @@ private final class MetronomeClock {
   private func beginLoop(bpm: Int, after delay: TimeInterval) {
     let clampedBPM = min(maximumBPM, max(minimumBPM, bpm))
     currentBPM = clampedBPM
-    let intervalMultiplier = min(1.0, 4.0 / Double(beatUnit))
-    let interval = 60.0 / Double(clampedBPM) * intervalMultiplier
+    let interval = 60.0 / Double(clampedBPM) / Double(subdivision)
     let intervalNanoseconds = Int(interval * 1_000_000_000)
     let buffer = makeMeasureBuffer(bpm: clampedBPM)
 
@@ -146,9 +160,8 @@ private final class MetronomeClock {
   }
 
   private func makeMeasureBuffer(bpm: Int) -> AVAudioPCMBuffer {
-    let intervalMultiplier = min(1.0, 4.0 / Double(beatUnit))
     let intervalFrames = AVAudioFrameCount(
-      (sampleRate * 60.0 / Double(bpm) * intervalMultiplier).rounded()
+      (sampleRate * 60.0 / Double(bpm) / Double(subdivision)).rounded()
     )
     let pulseCount = beatsPerMeasure * phaseCount
     let measureFrames = intervalFrames * AVAudioFrameCount(pulseCount)
@@ -181,7 +194,7 @@ private final class MetronomeClock {
   }
 
   private var phaseCount: Int {
-    max(1, 4 / beatUnit)
+    subdivision
   }
 
   private func advancePulse() {
@@ -211,8 +224,8 @@ private final class MetronomeClock {
     min(maximumBeatsPerMeasure, max(minimumBeatsPerMeasure, beats))
   }
 
-  private func normalizedBeatUnit(_ unit: Int) -> Int {
-    supportedBeatUnits.contains(unit) ? unit : 4
+  private func normalizedSubdivision(_ value: Int) -> Int {
+    supportedSubdivisions.contains(value) ? value : 1
   }
 
   private func stopLocked() {
@@ -238,11 +251,11 @@ public final class NativeMetronomeModule: Module {
 
     Events("onBeat")
 
-    Function("start") { (bpm: Int, beatsPerMeasure: Int, beatUnit: Int) in
+    Function("start") { (bpm: Int, beatsPerMeasure: Int, subdivision: Int) in
       self.clock.start(
         bpm: bpm,
         beatsPerMeasure: beatsPerMeasure,
-        beatUnit: beatUnit
+        subdivision: subdivision
       ) { [weak self] beat, phase, phaseCount in
         self?.sendEvent(
           "onBeat",
@@ -259,8 +272,12 @@ public final class NativeMetronomeModule: Module {
       self.clock.setTempo(bpm)
     }
 
-    Function("setTimeSignature") { (beatsPerMeasure: Int, beatUnit: Int) in
-      self.clock.setTimeSignature(beatsPerMeasure, beatUnit: beatUnit)
+    Function("setTimeSignature") { (beatsPerMeasure: Int) in
+      self.clock.setTimeSignature(beatsPerMeasure)
+    }
+
+    Function("setSubdivision") { (subdivision: Int) in
+      self.clock.setSubdivision(subdivision)
     }
 
     OnAppEntersBackground {

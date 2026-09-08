@@ -9,6 +9,7 @@ jest.mock('@/native/metronome', () => ({
     stop: jest.fn(),
     setTempo: jest.fn(),
     setTimeSignature: jest.fn(),
+    setSubdivision: jest.fn(),
     addListener: jest.fn(),
   },
 }));
@@ -46,7 +47,7 @@ describe('useMetronome', () => {
     await act(async () => {
       result.current.toggle();
     });
-    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 4);
+    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 1);
 
     await act(async () => {
       result.current.increase();
@@ -110,7 +111,7 @@ describe('useMetronome', () => {
 
     expect(result.current.timeSignature).toBe('3/4');
     expect(result.current.beat).toBe(0);
-    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(3, 4);
+    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(3);
     expect(mockNativeMetronome.start).toHaveBeenCalledTimes(1);
 
     await act(async () => {
@@ -128,36 +129,58 @@ describe('useMetronome', () => {
 
     expect(result.current.timeSignature).toBe('7/8');
     expect(result.current.beatsPerMeasure).toBe(7);
-    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(7, 8);
+    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(7);
   });
 
-  test('holds a half-note beat for two native phases before the next dot', async () => {
+  test('keeps meter note value separate from click subdivision', async () => {
     const { result } = await renderHook(() => useMetronome());
 
     await act(async () => {
       result.current.selectTimeSignature('4/2');
       result.current.toggle();
     });
-    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 2);
+    expect(result.current.timeSignature).toBe('4/2');
+    expect(result.current.subdivision).toBe(1);
+    expect(result.current.intervalMs).toBe(500);
+    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 1);
+  });
+
+  test('holds a triplet beat for three audible phases before the next dot', async () => {
+    const { result } = await renderHook(() => useMetronome());
 
     await act(async () => {
-      mockNativeBeatListener?.({ beat: 1, phase: 1, phaseCount: 2 });
+      result.current.selectSubdivision(3);
+      result.current.toggle();
+    });
+    expect(result.current.timeSignature).toBe('4/4');
+    expect(result.current.subdivision).toBe(3);
+    expect(result.current.intervalMs).toBeCloseTo(500 / 3);
+    expect(mockNativeMetronome.setSubdivision).toHaveBeenCalledWith(3);
+    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 3);
+
+    await act(async () => {
+      mockNativeBeatListener?.({ beat: 1, phase: 1, phaseCount: 3 });
     });
     expect(result.current.beat).toBe(1);
     expect(result.current.beatPhase).toBe(1);
-    expect(result.current.beatPhaseCount).toBe(2);
+    expect(result.current.beatPhaseCount).toBe(3);
 
     await act(async () => {
-      mockNativeBeatListener?.({ beat: 1, phase: 2, phaseCount: 2 });
+      mockNativeBeatListener?.({ beat: 1, phase: 2, phaseCount: 3 });
     });
     expect(result.current.beat).toBe(1);
     expect(result.current.beatPhase).toBe(2);
 
     await act(async () => {
-      mockNativeBeatListener?.({ beat: 2, phase: 1, phaseCount: 2 });
+      mockNativeBeatListener?.({ beat: 1, phase: 3, phaseCount: 3 });
+    });
+    expect(result.current.beat).toBe(1);
+    expect(result.current.beatPhase).toBe(3);
+
+    await act(async () => {
+      mockNativeBeatListener?.({ beat: 2, phase: 1, phaseCount: 3 });
     });
     expect(result.current.beat).toBe(2);
-    expect(result.current.beatPhase).toBe(1);
   });
 
   test('commits four steady taps and eases the displayed number to the measured tempo', async () => {

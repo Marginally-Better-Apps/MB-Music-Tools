@@ -3,7 +3,6 @@ import {
   changeBeatUnit,
   DEFAULT_TIME_SIGNATURE,
   getBeatUnit,
-  getBeatPhaseCount,
   getBeatsPerMeasure,
   getNoteTypeName,
   nextBeat,
@@ -45,17 +44,16 @@ describe('time signatures', () => {
   });
 
   test.each([
-    [1, 'whole note', 4],
-    [2, 'half note', 2],
-    [4, 'quarter note', 1],
-    [8, 'eighth note', 1],
-    [16, 'sixteenth note', 1],
-    [32, 'thirty-second note', 1],
+    [1, 'whole note'],
+    [2, 'half note'],
+    [4, 'quarter note'],
+    [8, 'eighth note'],
+    [16, 'sixteenth note'],
+    [32, 'thirty-second note'],
   ] as const)(
-    'maps denominator %i to its note type and beat growth phases',
-    (unit, name, phases) => {
+    'maps denominator %i to its time-signature note type',
+    (unit, name) => {
       expect(getNoteTypeName(unit)).toBe(name);
-      expect(getBeatPhaseCount(unit)).toBe(phases);
     }
   );
 });
