@@ -40,6 +40,8 @@ export default function MetronomeScreen() {
 
         <MetronomeBeat
           beat={metronome.beat}
+          beatPhase={metronome.beatPhase}
+          beatPhaseCount={metronome.beatPhaseCount}
           beatsPerMeasure={metronome.beatsPerMeasure}
           playing={metronome.playing}
           intervalMs={metronome.intervalMs}

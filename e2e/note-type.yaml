@@ -1,0 +1,31 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp
+- repeat:
+    times: 3
+    while:
+      notVisible: "Start metronome"
+    commands:
+      - tapOn:
+          text: "Metronome"
+          retryTapIfNoChange: true
+- assertVisible: "Tempo, 120 BPM"
+- assertVisible: "Beats per measure, 4"
+- assertVisible: "Note type, quarter note"
+- startRecording: note-type-substeps
+- swipe:
+    start: 52%, 43%
+    end: 46%, 43%
+    duration: 550
+- assertVisible: "Note type, half note"
+- tapOn: "Start metronome"
+- assertVisible: "Stop metronome"
+- extendedWaitUntil:
+    visible: "Beat 1 of 4, pulse 1 of 2, 4/2"
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "Beat 1 of 4, pulse 2 of 2, 4/2"
+    timeout: 10000
+- tapOn: "Stop metronome"
+- assertVisible: "Start metronome"
+- stopRecording

@@ -11,7 +11,8 @@ import {
 import {
   DEFAULT_TIME_SIGNATURE,
   getBeatsPerMeasure,
-  nextBeat,
+  getBeatUnit,
+  getPulseIntervalMultiplier,
   TimeSignature,
 } from '@/lib/time-signature';
 import { NativeMetronome } from '@/native/metronome';
@@ -25,6 +26,8 @@ export function useMetronome() {
   const [displayBpm, setDisplayBpm] = useState(DEFAULT_BPM);
   const [playing, setPlaying] = useState(false);
   const [beat, setBeat] = useState(0);
+  const [beatPhase, setBeatPhase] = useState(0);
+  const [beatPhaseCount, setBeatPhaseCount] = useState(1);
   const [timeSignature, setTimeSignature] = useState<TimeSignature>(DEFAULT_TIME_SIGNATURE);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const bpmRef = useRef(bpm);
@@ -34,8 +37,10 @@ export function useMetronome() {
   const animationRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const beatSubscription = NativeMetronome.addListener('onBeat', () => {
-      setBeat((current) => nextBeat(current, timeSignatureRef.current));
+    const beatSubscription = NativeMetronome.addListener('onBeat', (event) => {
+      setBeat(event.beat);
+      setBeatPhase(event.phase);
+      setBeatPhaseCount(event.phaseCount);
     });
     return () => {
       beatSubscription.remove();
@@ -107,10 +112,13 @@ export function useMetronome() {
     bpm,
     displayBpm,
     beat,
+    beatPhase,
+    beatPhaseCount,
     beatsPerMeasure: getBeatsPerMeasure(timeSignature),
     playing,
     timeSignature,
-    intervalMs: bpmToIntervalMs(bpm),
+    intervalMs:
+      bpmToIntervalMs(bpm) * getPulseIntervalMultiplier(getBeatUnit(timeSignature)),
     toggle() {
       setPlaying((current) => {
         if (current) {
@@ -119,9 +127,11 @@ export function useMetronome() {
         }
 
         setBeat(0);
+        setBeatPhase(0);
         NativeMetronome.start(
           bpmRef.current,
-          getBeatsPerMeasure(timeSignatureRef.current)
+          getBeatsPerMeasure(timeSignatureRef.current),
+          getBeatUnit(timeSignatureRef.current)
         );
         return true;
       });
@@ -130,7 +140,12 @@ export function useMetronome() {
       timeSignatureRef.current = signature;
       setTimeSignature(signature);
       setBeat(0);
-      NativeMetronome.setTimeSignature(getBeatsPerMeasure(signature));
+      setBeatPhase(0);
+      setBeatPhaseCount(1);
+      NativeMetronome.setTimeSignature(
+        getBeatsPerMeasure(signature),
+        getBeatUnit(signature)
+      );
     },
     setTempo(nextBpm: number) {
       tapTimestampsRef.current = [];

@@ -2,6 +2,8 @@ import { NativeModule, requireOptionalNativeModule } from 'expo-modules-core';
 
 type MetronomeBeatEvent = {
   beat: number;
+  phase: number;
+  phaseCount: number;
 };
 
 type NativeMetronomeEvents = {
@@ -9,10 +11,10 @@ type NativeMetronomeEvents = {
 };
 
 declare class NativeMetronomeModule extends NativeModule<NativeMetronomeEvents> {
-  start(bpm: number, beatsPerMeasure: number): void;
+  start(bpm: number, beatsPerMeasure: number, beatUnit: number): void;
   stop(): void;
   setTempo(bpm: number): void;
-  setTimeSignature(beatsPerMeasure: number): void;
+  setTimeSignature(beatsPerMeasure: number, beatUnit: number): void;
 }
 
 const iosMetronome = requireOptionalNativeModule<NativeMetronomeModule>('NativeMetronome');

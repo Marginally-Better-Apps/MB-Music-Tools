@@ -1,11 +1,13 @@
 import { StyleSheet, View } from 'react-native';
 
+import { NoteValueGlyph } from '@/components/note-value-glyph';
 import { ScrubbableNumber } from '@/components/scrubbable-number';
 import { useTheme } from '@/hooks/use-theme';
 import {
   BEAT_UNITS,
   getBeatUnit,
   getBeatsPerMeasure,
+  getNoteTypeName,
   MAX_BEATS_PER_MEASURE,
   MIN_BEATS_PER_MEASURE,
   TimeSignature,
@@ -37,9 +39,11 @@ export function TimeSignatureEditor({ onChange, value }: TimeSignatureEditorProp
       />
       <View style={[styles.fractionBar, { backgroundColor: theme.text }]} />
       <ScrubbableNumber
-        accessibilityLabel={`Beat unit, ${unit}`}
+        accessibilityLabel={`Note type, ${getNoteTypeName(unit)}`}
+        displayAccessory={<NoteValueGlyph unit={unit} />}
+        displayValue={unit}
         onChange={(nextUnit) => onChange(`${beats}/${nextUnit}`)}
-        textStyle={styles.number}
+        textStyle={[styles.number, styles.noteValue]}
         value={unit}
         values={BEAT_UNITS}
       />
@@ -62,5 +66,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 66,
     letterSpacing: -1,
+  },
+  noteValue: {
+    fontSize: 48,
+    lineHeight: 62,
+    letterSpacing: -0.5,
   },
 });

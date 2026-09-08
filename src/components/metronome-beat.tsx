@@ -14,6 +14,8 @@ const FIRST_DOT_SIZE = 30;
 
 type MetronomeBeatProps = {
   beat: number;
+  beatPhase: number;
+  beatPhaseCount: number;
   beatsPerMeasure: number;
   playing: boolean;
   intervalMs: number;
@@ -22,6 +24,8 @@ type MetronomeBeatProps = {
 
 export function MetronomeBeat({
   beat,
+  beatPhase,
+  beatPhaseCount,
   beatsPerMeasure,
   playing,
   intervalMs,
@@ -31,7 +35,7 @@ export function MetronomeBeat({
   const [pulse] = useState(() => new Animated.Value(0));
   const supportsGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
   const Dot = supportsGlass ? GlassView : View;
-  const isDownbeat = playing && beat === 1;
+  const isDownbeat = playing && beat === 1 && beatPhase === 1;
 
   useEffect(() => {
     if (!playing || beat === 0) {
@@ -39,23 +43,16 @@ export function MetronomeBeat({
       return;
     }
 
-    const animation = Animated.sequence([
-      Animated.timing(pulse, {
-        toValue: 1,
-        duration: Math.min(90, intervalMs * 0.2),
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(pulse, {
-        toValue: 0,
-        duration: Math.max(90, intervalMs * 0.68),
-        easing: Easing.inOut(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]);
+    if (beatPhase === 1) pulse.setValue(0);
+    const animation = Animated.timing(pulse, {
+      toValue: beatPhase / beatPhaseCount,
+      duration: Math.min(130, intervalMs * 0.24),
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
     animation.start();
     return () => animation.stop();
-  }, [beat, intervalMs, playing, pulse]);
+  }, [beat, beatPhase, beatPhaseCount, intervalMs, playing, pulse]);
 
   const activeScale = pulse.interpolate({
     inputRange: [0, 1],
@@ -66,7 +63,9 @@ export function MetronomeBeat({
     ? `Stopped, ${timeSignature}`
     : beat === 0
       ? `Waiting for beat 1, ${timeSignature}`
-      : `Beat ${beat} of ${beatsPerMeasure}, ${timeSignature}`;
+      : beatPhaseCount > 1
+        ? `Beat ${beat} of ${beatsPerMeasure}, pulse ${beatPhase} of ${beatPhaseCount}, ${timeSignature}`
+        : `Beat ${beat} of ${beatsPerMeasure}, ${timeSignature}`;
 
   return (
     <View

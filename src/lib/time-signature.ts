@@ -2,6 +2,15 @@ export const MIN_BEATS_PER_MEASURE = 1;
 export const MAX_BEATS_PER_MEASURE = 32;
 export const BEAT_UNITS = [1, 2, 4, 8, 16, 32] as const;
 
+const NOTE_TYPE_NAMES: Record<number, string> = {
+  1: 'whole note',
+  2: 'half note',
+  4: 'quarter note',
+  8: 'eighth note',
+  16: 'sixteenth note',
+  32: 'thirty-second note',
+};
+
 export type TimeSignature = `${number}/${number}`;
 
 export const DEFAULT_TIME_SIGNATURE: TimeSignature = '4/4';
@@ -12,6 +21,18 @@ export function getBeatsPerMeasure(signature: TimeSignature): number {
 
 export function getBeatUnit(signature: TimeSignature): number {
   return Number(signature.split('/')[1]);
+}
+
+export function getNoteTypeName(unit: number): string {
+  return NOTE_TYPE_NAMES[unit] ?? `${unit}th note`;
+}
+
+export function getBeatPhaseCount(unit: number): number {
+  return Math.max(1, Math.floor(4 / unit));
+}
+
+export function getPulseIntervalMultiplier(unit: number): number {
+  return Math.min(1, 4 / unit);
 }
 
 export function changeBeatCount(

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   PanResponder,
@@ -17,7 +17,8 @@ const DRAG_LIMIT = 18;
 
 type ScrubbableNumberProps = {
   accessibilityLabel: string;
-  displayValue?: number;
+  displayAccessory?: ReactNode;
+  displayValue?: number | string;
   onChange: (value: number) => void;
   onTap?: () => void;
   style?: StyleProp<ViewStyle>;
@@ -28,6 +29,7 @@ type ScrubbableNumberProps = {
 
 export function ScrubbableNumber({
   accessibilityLabel,
+  displayAccessory,
   displayValue,
   onChange,
   onTap,
@@ -151,7 +153,10 @@ export function ScrubbableNumber({
           },
         ]}
         {...panResponder.panHandlers}>
-        <ThemedText style={[styles.number, textStyle]}>{displayValue ?? value}</ThemedText>
+        <View style={styles.displayRow}>
+          <ThemedText style={[styles.number, textStyle]}>{displayValue ?? value}</ThemedText>
+          {displayAccessory}
+        </View>
       </Animated.View>
     </View>
   );
@@ -171,5 +176,11 @@ const styles = StyleSheet.create({
   number: {
     fontVariant: ['tabular-nums'],
     textAlign: 'center',
+  },
+  displayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
 });

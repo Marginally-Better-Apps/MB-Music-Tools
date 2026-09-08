@@ -11,7 +11,7 @@ appId: com.marginallybetterapps.musictools
           retryTapIfNoChange: true
 - assertVisible: "Tempo, 120 BPM"
 - assertVisible: "Beats per measure, 4"
-- assertVisible: "Beat unit, 4"
+- assertVisible: "Note type, quarter note"
 - assertNotVisible: "Time signature"
 - assertNotVisible: "Drag numbers"
 - assertNotVisible: "Tap"
@@ -30,7 +30,7 @@ appId: com.marginallybetterapps.musictools
     end: 54%, 43%
     duration: 500
 - assertVisible: "Beats per measure, 7"
-- assertVisible: "Beat unit, 8"
+- assertVisible: "Note type, eighth note"
 - assertNotVisible: "Downbeat"
 - tapOn: "Start metronome"
 - assertVisible: "Stop metronome"

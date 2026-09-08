@@ -15,7 +15,9 @@ jest.mock('@/native/metronome', () => ({
 
 const mockNativeMetronome = jest.requireMock('@/native/metronome').NativeMetronome;
 const mockIsReduceMotionEnabled = jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled');
-let mockNativeBeatListener: ((event: { beat: number }) => void) | undefined;
+let mockNativeBeatListener:
+  | ((event: { beat: number; phase: number; phaseCount: number }) => void)
+  | undefined;
 
 describe('useMetronome', () => {
   beforeEach(() => {
@@ -24,7 +26,10 @@ describe('useMetronome', () => {
     mockIsReduceMotionEnabled.mockResolvedValue(false);
     mockNativeBeatListener = undefined;
     mockNativeMetronome.addListener.mockImplementation(
-      (_eventName: string, listener: (event: { beat: number }) => void) => {
+      (
+        _eventName: string,
+        listener: (event: { beat: number; phase: number; phaseCount: number }) => void
+      ) => {
         mockNativeBeatListener = listener;
         return { remove: jest.fn() };
       }
@@ -41,7 +46,7 @@ describe('useMetronome', () => {
     await act(async () => {
       result.current.toggle();
     });
-    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4);
+    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 4);
 
     await act(async () => {
       result.current.increase();
@@ -62,10 +67,12 @@ describe('useMetronome', () => {
     expect(result.current.beat).toBe(0);
 
     await act(async () => {
-      mockNativeBeatListener?.({ beat: 1 });
+      mockNativeBeatListener?.({ beat: 1, phase: 1, phaseCount: 1 });
     });
 
     expect(result.current.beat).toBe(1);
+    expect(result.current.beatPhase).toBe(1);
+    expect(result.current.beatPhaseCount).toBe(1);
   });
 
   test.each([
@@ -84,7 +91,7 @@ describe('useMetronome', () => {
     const actualBeats: number[] = [];
     for (const expectedBeat of expectedBeats) {
       await act(async () => {
-        mockNativeBeatListener?.({ beat: expectedBeat });
+        mockNativeBeatListener?.({ beat: expectedBeat, phase: 1, phaseCount: 1 });
       });
       actualBeats.push(result.current.beat);
     }
@@ -97,17 +104,17 @@ describe('useMetronome', () => {
 
     await act(async () => {
       result.current.toggle();
-      mockNativeBeatListener?.({ beat: 1 });
+      mockNativeBeatListener?.({ beat: 1, phase: 1, phaseCount: 1 });
       result.current.selectTimeSignature('3/4');
     });
 
     expect(result.current.timeSignature).toBe('3/4');
     expect(result.current.beat).toBe(0);
-    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(3);
+    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(3, 4);
     expect(mockNativeMetronome.start).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      mockNativeBeatListener?.({ beat: 1 });
+      mockNativeBeatListener?.({ beat: 1, phase: 1, phaseCount: 1 });
     });
     expect(result.current.beat).toBe(1);
   });
@@ -121,7 +128,36 @@ describe('useMetronome', () => {
 
     expect(result.current.timeSignature).toBe('7/8');
     expect(result.current.beatsPerMeasure).toBe(7);
-    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(7);
+    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(7, 8);
+  });
+
+  test('holds a half-note beat for two native phases before the next dot', async () => {
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => {
+      result.current.selectTimeSignature('4/2');
+      result.current.toggle();
+    });
+    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 2);
+
+    await act(async () => {
+      mockNativeBeatListener?.({ beat: 1, phase: 1, phaseCount: 2 });
+    });
+    expect(result.current.beat).toBe(1);
+    expect(result.current.beatPhase).toBe(1);
+    expect(result.current.beatPhaseCount).toBe(2);
+
+    await act(async () => {
+      mockNativeBeatListener?.({ beat: 1, phase: 2, phaseCount: 2 });
+    });
+    expect(result.current.beat).toBe(1);
+    expect(result.current.beatPhase).toBe(2);
+
+    await act(async () => {
+      mockNativeBeatListener?.({ beat: 2, phase: 1, phaseCount: 2 });
+    });
+    expect(result.current.beat).toBe(2);
+    expect(result.current.beatPhase).toBe(1);
   });
 
   test('commits four steady taps and eases the displayed number to the measured tempo', async () => {

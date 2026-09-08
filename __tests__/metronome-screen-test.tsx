@@ -25,7 +25,9 @@ jest.mock('expo-glass-effect', () => {
 
 describe('<MetronomeScreen />', () => {
   test('shows a large default tempo and a play control a stranger can find', async () => {
-    const { getByLabelText, getByText, queryByText } = await render(<MetronomeScreen />);
+    const { getByLabelText, getByTestId, getByText, queryByText } = await render(
+      <MetronomeScreen />
+    );
 
     expect(getByText('120')).toBeTruthy();
     expect(getByLabelText('Tempo, 120 BPM')).toBeTruthy();
@@ -33,14 +35,20 @@ describe('<MetronomeScreen />', () => {
     expect(queryByText('Set a tempo when you are ready.')).toBeNull();
     expect(queryByText('Explore')).toBeNull();
     expect(getByLabelText('Beats per measure, 4')).toBeTruthy();
-    expect(getByLabelText('Beat unit, 4')).toBeTruthy();
+    expect(getByLabelText('Note type, quarter note')).toBeTruthy();
+    expect(getByTestId('note-value-glyph-4')).toBeTruthy();
   });
 
   test('builds 3/4, shows three beat dots, and makes beat one distinct without a label', async () => {
     const nativeMetronome = jest.requireMock('@/native/metronome').NativeMetronome;
-    let beatListener: ((event: { beat: number }) => void) | undefined;
+    let beatListener:
+      | ((event: { beat: number; phase: number; phaseCount: number }) => void)
+      | undefined;
     nativeMetronome.addListener.mockImplementation(
-      (_eventName: string, listener: (event: { beat: number }) => void) => {
+      (
+        _eventName: string,
+        listener: (event: { beat: number; phase: number; phaseCount: number }) => void
+      ) => {
         beatListener = listener;
         return { remove: jest.fn() };
       }
@@ -58,7 +66,7 @@ describe('<MetronomeScreen />', () => {
 
     await fireEvent.press(getByLabelText('Start metronome'));
     await act(async () => {
-      beatListener?.({ beat: 1 });
+      beatListener?.({ beat: 1, phase: 1, phaseCount: 1 });
     });
 
     expect(queryByText('Downbeat')).toBeNull();
@@ -91,19 +99,22 @@ describe('<MetronomeScreen />', () => {
   });
 
   test('creates an uncommon 7/8 meter with seven dots', async () => {
-    const { getAllByTestId, getByLabelText } = await render(<MetronomeScreen />);
+    const { getAllByTestId, getByLabelText, getByTestId } = await render(
+      <MetronomeScreen />
+    );
 
     for (let step = 0; step < 3; step += 1) {
       await fireEvent(getByLabelText(`Beats per measure, ${step + 4}`), 'onAccessibilityAction', {
         nativeEvent: { actionName: 'increment' },
       });
     }
-    await fireEvent(getByLabelText('Beat unit, 4'), 'accessibilityAction', {
+    await fireEvent(getByLabelText('Note type, quarter note'), 'accessibilityAction', {
       nativeEvent: { actionName: 'increment' },
     });
 
     expect(getByLabelText('Beats per measure, 7')).toBeTruthy();
-    expect(getByLabelText('Beat unit, 8')).toBeTruthy();
+    expect(getByLabelText('Note type, eighth note')).toBeTruthy();
+    expect(getByTestId('note-value-glyph-8')).toBeTruthy();
     expect(getAllByTestId('beat-dot')).toHaveLength(7);
   });
 
@@ -130,6 +141,46 @@ describe('<MetronomeScreen />', () => {
     expect(queryByText('BEATS')).toBeNull();
     expect(queryByText('NOTE VALUE')).toBeNull();
     expect(queryAllByTestId('meter-scrubber-glass')).toHaveLength(0);
+  });
+
+  test('shows half-note timing as two growth phases without visible helper text', async () => {
+    const nativeMetronome = jest.requireMock('@/native/metronome').NativeMetronome;
+    let beatListener:
+      | ((event: { beat: number; phase: number; phaseCount: number }) => void)
+      | undefined;
+    nativeMetronome.addListener.mockImplementation(
+      (
+        _eventName: string,
+        listener: (event: { beat: number; phase: number; phaseCount: number }) => void
+      ) => {
+        beatListener = listener;
+        return { remove: jest.fn() };
+      }
+    );
+    const { getByLabelText, getByTestId, queryByText } = await render(
+      <MetronomeScreen />
+    );
+
+    await fireEvent(getByLabelText('Note type, quarter note'), 'accessibilityAction', {
+      nativeEvent: { actionName: 'decrement' },
+    });
+    expect(getByTestId('note-value-glyph-2')).toBeTruthy();
+    expect(queryByText('Half note')).toBeNull();
+
+    await fireEvent.press(getByLabelText('Start metronome'));
+    await act(async () => {
+      beatListener?.({ beat: 1, phase: 1, phaseCount: 2 });
+    });
+    expect(getByLabelText('Metronome beat').props.accessibilityValue).toEqual({
+      text: 'Beat 1 of 4, pulse 1 of 2, 4/2',
+    });
+
+    await act(async () => {
+      beatListener?.({ beat: 1, phase: 2, phaseCount: 2 });
+    });
+    expect(getByLabelText('Metronome beat').props.accessibilityValue).toEqual({
+      text: 'Beat 1 of 4, pulse 2 of 2, 4/2',
+    });
   });
 
   test('keeps the first beat dot visibly larger even while stopped', async () => {
