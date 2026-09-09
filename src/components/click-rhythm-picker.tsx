@@ -5,6 +5,7 @@ import {
   PanResponder,
   Pressable,
   StyleSheet,
+  Text,
   View,
 } from 'react-native';
 import {
@@ -14,8 +15,6 @@ import {
 } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 
-import { ThemedText } from '@/components/themed-text';
-import { Fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ClickRhythm, CLICK_RHYTHMS } from '@/lib/click-rhythm';
 
@@ -127,6 +126,7 @@ export function ClickRhythmPicker({ onChange, value }: ClickRhythmPickerProps) {
 
       {CLICK_RHYTHMS.map((option, index) => {
         const selected = option.id === value;
+        const color = selected ? theme.text : theme.textSecondary;
         return (
           <Pressable
             accessibilityLabel={`${option.label} click rhythm${selected ? ', selected' : ''}`}
@@ -136,16 +136,20 @@ export function ClickRhythmPicker({ onChange, value }: ClickRhythmPickerProps) {
             onPress={() => selectIndex(index)}
             style={({ pressed }) => [styles.option, pressed && styles.pressed]}
             testID="click-rhythm-option">
-            <ThemedText
-              adjustsFontSizeToFit
-              numberOfLines={1}
-              style={[
-                styles.label,
-                { color: selected ? theme.text : theme.textSecondary },
-                selected && styles.selectedLabel,
-              ]}>
-              {option.label}
-            </ThemedText>
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={styles.iconFrame}
+              testID="click-rhythm-icon">
+              {'tupletGlyph' in option ? (
+                <>
+                  <Text style={[styles.tupletNumber, { color }]}>{option.tupletGlyph}</Text>
+                  <Text style={[styles.tripletNotes, { color }]}>{option.glyph}</Text>
+                </>
+              ) : (
+                <Text style={[styles.noteGlyph, { color }]}>{option.glyph}</Text>
+              )}
+            </View>
           </Pressable>
         );
       })}
@@ -178,20 +182,35 @@ const styles = StyleSheet.create({
     zIndex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 2,
   },
   pressed: {
     opacity: 0.56,
   },
-  label: {
-    fontFamily: Fonts.sans,
-    fontSize: 12.5,
-    fontWeight: '500',
-    letterSpacing: -0.25,
-    lineHeight: 17,
+  iconFrame: {
+    width: '100%',
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noteGlyph: {
+    fontFamily: 'Bravura Text',
+    fontSize: 34,
+    lineHeight: 40,
     textAlign: 'center',
   },
-  selectedLabel: {
-    fontWeight: '600',
+  tripletNotes: {
+    fontFamily: 'Bravura Text',
+    fontSize: 17,
+    lineHeight: 22,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  tupletNumber: {
+    position: 'absolute',
+    top: 0,
+    fontFamily: 'Bravura Text',
+    fontSize: 12,
+    lineHeight: 14,
+    textAlign: 'center',
   },
 });

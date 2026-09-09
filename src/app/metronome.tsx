@@ -39,11 +39,6 @@ export default function MetronomeScreen() {
           />
         </View>
 
-        <ClickRhythmPicker
-          onChange={metronome.selectClickRhythm}
-          value={metronome.clickRhythm}
-        />
-
         <MetronomeBeat
           beat={metronome.beat}
           beatPhase={metronome.beatPhase}
@@ -68,6 +63,11 @@ export default function MetronomeScreen() {
             </ThemedText>
           </AnimatedGlassButton>
         </View>
+
+        <ClickRhythmPicker
+          onChange={metronome.selectClickRhythm}
+          value={metronome.clickRhythm}
+        />
       </SafeAreaView>
     </ThemedView>
   );
@@ -105,7 +105,6 @@ const styles = StyleSheet.create({
   transportRow: {
     width: 240,
     flexDirection: 'row',
-    marginBottom: Spacing.four,
   },
   transportHit: {
     flex: 1,

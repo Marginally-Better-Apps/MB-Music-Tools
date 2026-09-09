@@ -1,4 +1,5 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
 import MetronomeScreen from '@/app/metronome';
 
@@ -146,7 +147,7 @@ describe('<MetronomeScreen />', () => {
     expect(queryAllByTestId('meter-scrubber-glass')).toHaveLength(0);
   });
 
-  test('shows six peer rhythm choices and gives triplets three audible phases', async () => {
+  test('shows six peer rhythm icons and gives triplets three audible phases', async () => {
     const nativeMetronome = jest.requireMock('@/native/metronome').NativeMetronome;
     let beatListener:
       | ((event: { beat: number; phase: number; phaseCount: number }) => void)
@@ -160,14 +161,15 @@ describe('<MetronomeScreen />', () => {
         return { remove: jest.fn() };
       }
     );
-    const { getAllByTestId, getByLabelText, getByText, queryAllByTestId } = await render(
+    const { getAllByTestId, getByLabelText, queryAllByTestId, queryByText } = await render(
       <MetronomeScreen />
     );
 
     expect(getAllByTestId('click-rhythm-option')).toHaveLength(6);
     for (const label of ['Whole', 'Half', 'Quarter', 'Eighth', 'Triplet', '16th']) {
-      expect(getByText(label)).toBeTruthy();
+      expect(queryByText(label)).toBeNull();
     }
+    expect(getAllByTestId('click-rhythm-icon', { includeHiddenElements: true })).toHaveLength(6);
     expect(queryAllByTestId(/subdivision-glyph|note-value-glyph/)).toHaveLength(0);
 
     await fireEvent.press(getByLabelText('Triplet click rhythm'));
@@ -190,12 +192,33 @@ describe('<MetronomeScreen />', () => {
     });
   });
 
-  test('keeps the first beat dot visibly larger even while stopped', async () => {
+  test('keeps every resting beat dot and its layout slot exactly consistent', async () => {
     const { getAllByTestId } = await render(<MetronomeScreen />);
     const dots = getAllByTestId('beat-dot');
+    const slots = getAllByTestId('beat-dot-slot');
 
-    expect(dots[0]).toHaveStyle({ width: 30, height: 30 });
-    expect(dots[1]).toHaveStyle({ width: 20, height: 20 });
+    expect(slots).toHaveLength(4);
+    for (const slot of slots) {
+      expect(StyleSheet.flatten(slot.props.style)).toMatchObject({ width: 42, height: 42 });
+    }
+    for (const dot of dots) {
+      expect(StyleSheet.flatten(dot.props.style)).toMatchObject({
+        width: 24,
+        height: 24,
+      });
+      expect(StyleSheet.flatten(dot.props.style).transform).toBeUndefined();
+      expect(dot.props.glassEffectStyle).toBeUndefined();
+    }
+  });
+
+  test('places the click-rhythm pill below the Play button', async () => {
+    const { toJSON } = await render(<MetronomeScreen />);
+    const tree = JSON.stringify(toJSON());
+    const playIndex = tree.indexOf('playback-glass');
+    const rhythmIndex = tree.indexOf('click-rhythm-picker');
+
+    expect(playIndex).toBeGreaterThanOrEqual(0);
+    expect(rhythmIndex).toBeGreaterThan(playIndex);
   });
 
   test('removes tempo steppers and Tap so Play is the only bottom control', async () => {

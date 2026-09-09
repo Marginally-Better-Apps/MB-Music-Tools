@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import {
-  GlassView,
-  isGlassEffectAPIAvailable,
-  isLiquidGlassAvailable,
-} from 'expo-glass-effect';
 
 import { useTheme } from '@/hooks/use-theme';
 import { TimeSignature } from '@/lib/time-signature';
 
-const DOT_SIZE = 20;
-const FIRST_DOT_SIZE = 30;
+const DOT_SIZE = 24;
+const DOT_SLOT_SIZE = 42;
 
 type MetronomeBeatProps = {
   beat: number;
@@ -33,8 +28,6 @@ export function MetronomeBeat({
 }: MetronomeBeatProps) {
   const theme = useTheme();
   const [pulse] = useState(() => new Animated.Value(0));
-  const supportsGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
-  const Dot = supportsGlass ? GlassView : View;
   const isDownbeat = playing && beat === 1 && beatPhase === 1;
 
   useEffect(() => {
@@ -80,45 +73,36 @@ export function MetronomeBeat({
           const isFirst = dotBeat === 1;
 
           return (
-            <Animated.View
-              key={dotBeat}
-              style={[
-                styles.dotShell,
-                {
-                  width: isFirst ? FIRST_DOT_SIZE : DOT_SIZE,
-                  height: isFirst ? FIRST_DOT_SIZE : DOT_SIZE,
-                  borderRadius: isFirst ? FIRST_DOT_SIZE / 2 : DOT_SIZE / 2,
-                },
-                isActive && {
-                  shadowColor: theme.accent,
-                  shadowOpacity: isDownbeat ? 0.72 : 0.52,
-                  shadowRadius: isDownbeat ? 16 : 11,
-                  transform: [{ scale: activeScale }],
-                },
-              ]}>
-              <Dot
+            <View key={dotBeat} style={styles.dotSlot} testID="beat-dot-slot">
+              {isActive ? (
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.pulse,
+                    {
+                      backgroundColor: theme.accentSoft,
+                      borderColor: theme.accent,
+                      shadowColor: theme.accent,
+                      shadowOpacity: isDownbeat ? 0.72 : 0.52,
+                      shadowRadius: isDownbeat ? 16 : 11,
+                      transform: [{ scale: activeScale }],
+                    },
+                  ]}
+                  testID="beat-pulse"
+                />
+              ) : null}
+              <View
                 testID="beat-dot"
-                glassEffectStyle="clear"
-                tintColor={isActive ? theme.accent : theme.backgroundElement}
                 style={[
                   styles.dot,
                   {
-                    width: isFirst ? FIRST_DOT_SIZE : DOT_SIZE,
-                    height: isFirst ? FIRST_DOT_SIZE : DOT_SIZE,
-                    borderRadius: isFirst ? FIRST_DOT_SIZE / 2 : DOT_SIZE / 2,
-                    backgroundColor: supportsGlass
-                      ? 'transparent'
-                      : isActive
-                        ? theme.accent
-                        : isFirst
-                          ? theme.backgroundSelected
-                          : theme.backgroundElement,
-                    borderColor: isFirst ? theme.accent : theme.textSecondary,
-                    borderWidth: isFirst ? 1.5 : StyleSheet.hairlineWidth,
+                    backgroundColor: isActive ? theme.accent : theme.backgroundElement,
+                    borderColor: isFirst || isActive ? theme.accent : theme.textSecondary,
+                    borderWidth: isFirst || isActive ? 1.5 : StyleSheet.hairlineWidth,
                   },
                 ]}
               />
-            </Animated.View>
+            </View>
           );
         })}
       </View>
@@ -142,10 +126,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
-  dotShell: {
-    shadowOffset: { width: 0, height: 2 },
+  dotSlot: {
+    width: DOT_SLOT_SIZE,
+    height: DOT_SLOT_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dot: {
-    overflow: 'hidden',
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
+  },
+  pulse: {
+    position: 'absolute',
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 2 },
   },
 });
