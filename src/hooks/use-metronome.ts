@@ -14,10 +14,12 @@ import {
   TimeSignature,
 } from '@/lib/time-signature';
 import {
-  DEFAULT_SUBDIVISION,
-  Subdivision,
-  subdivisionIntervalMs,
-} from '@/lib/subdivision';
+  ClickRhythm,
+  clickIntervalMs,
+  DEFAULT_CLICK_RHYTHM,
+  getBeatPhaseCount,
+  getClickRate,
+} from '@/lib/click-rhythm';
 import { NativeMetronome } from '@/native/metronome';
 
 const TAP_TEMPO_RESET_MS = 2000;
@@ -32,11 +34,11 @@ export function useMetronome() {
   const [beatPhase, setBeatPhase] = useState(0);
   const [beatPhaseCount, setBeatPhaseCount] = useState(1);
   const [timeSignature, setTimeSignature] = useState<TimeSignature>(DEFAULT_TIME_SIGNATURE);
-  const [subdivision, setSubdivision] = useState<Subdivision>(DEFAULT_SUBDIVISION);
+  const [clickRhythm, setClickRhythm] = useState<ClickRhythm>(DEFAULT_CLICK_RHYTHM);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const bpmRef = useRef(bpm);
   const timeSignatureRef = useRef(timeSignature);
-  const subdivisionRef = useRef(subdivision);
+  const clickRhythmRef = useRef(clickRhythm);
   const displayBpmRef = useRef(displayBpm);
   const tapTimestampsRef = useRef<number[]>([]);
   const animationRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -121,9 +123,9 @@ export function useMetronome() {
     beatPhaseCount,
     beatsPerMeasure: getBeatsPerMeasure(timeSignature),
     playing,
-    subdivision,
+    clickRhythm,
     timeSignature,
-    intervalMs: subdivisionIntervalMs(bpmToIntervalMs(bpm), subdivision),
+    intervalMs: clickIntervalMs(bpmToIntervalMs(bpm), clickRhythm),
     toggle() {
       setPlaying((current) => {
         if (current) {
@@ -136,7 +138,7 @@ export function useMetronome() {
         NativeMetronome.start(
           bpmRef.current,
           getBeatsPerMeasure(timeSignatureRef.current),
-          subdivisionRef.current
+          getClickRate(clickRhythmRef.current)
         );
         return true;
       });
@@ -146,16 +148,16 @@ export function useMetronome() {
       setTimeSignature(signature);
       setBeat(0);
       setBeatPhase(0);
-      setBeatPhaseCount(subdivisionRef.current);
+      setBeatPhaseCount(getBeatPhaseCount(clickRhythmRef.current));
       NativeMetronome.setTimeSignature(getBeatsPerMeasure(signature));
     },
-    selectSubdivision(nextSubdivision: Subdivision) {
-      subdivisionRef.current = nextSubdivision;
-      setSubdivision(nextSubdivision);
+    selectClickRhythm(nextRhythm: ClickRhythm) {
+      clickRhythmRef.current = nextRhythm;
+      setClickRhythm(nextRhythm);
       setBeat(0);
       setBeatPhase(0);
-      setBeatPhaseCount(nextSubdivision);
-      NativeMetronome.setSubdivision(nextSubdivision);
+      setBeatPhaseCount(getBeatPhaseCount(nextRhythm));
+      NativeMetronome.setClickRate(getClickRate(nextRhythm));
     },
     setTempo(nextBpm: number) {
       tapTimestampsRef.current = [];

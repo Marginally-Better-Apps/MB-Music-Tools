@@ -9,7 +9,7 @@ jest.mock('@/native/metronome', () => ({
     stop: jest.fn(),
     setTempo: jest.fn(),
     setTimeSignature: jest.fn(),
-    setSubdivision: jest.fn(),
+    setClickRate: jest.fn(),
     addListener: jest.fn(),
   },
 }));
@@ -132,7 +132,7 @@ describe('useMetronome', () => {
     expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(7);
   });
 
-  test('keeps meter note value separate from click subdivision', async () => {
+  test('keeps the meter denominator separate from the selected click rhythm', async () => {
     const { result } = await renderHook(() => useMetronome());
 
     await act(async () => {
@@ -140,7 +140,7 @@ describe('useMetronome', () => {
       result.current.toggle();
     });
     expect(result.current.timeSignature).toBe('4/2');
-    expect(result.current.subdivision).toBe(1);
+    expect(result.current.clickRhythm).toBe('quarter');
     expect(result.current.intervalMs).toBe(500);
     expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 1);
   });
@@ -149,13 +149,13 @@ describe('useMetronome', () => {
     const { result } = await renderHook(() => useMetronome());
 
     await act(async () => {
-      result.current.selectSubdivision(3);
+      result.current.selectClickRhythm('triplet');
       result.current.toggle();
     });
     expect(result.current.timeSignature).toBe('4/4');
-    expect(result.current.subdivision).toBe(3);
+    expect(result.current.clickRhythm).toBe('triplet');
     expect(result.current.intervalMs).toBeCloseTo(500 / 3);
-    expect(mockNativeMetronome.setSubdivision).toHaveBeenCalledWith(3);
+    expect(mockNativeMetronome.setClickRate).toHaveBeenCalledWith(3);
     expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 3);
 
     await act(async () => {
@@ -181,6 +181,25 @@ describe('useMetronome', () => {
       mockNativeBeatListener?.({ beat: 2, phase: 1, phaseCount: 3 });
     });
     expect(result.current.beat).toBe(2);
+  });
+
+  test.each([
+    ['whole', 2000, 0.25],
+    ['half', 1000, 0.5],
+    ['quarter', 500, 1],
+    ['eighth', 250, 2],
+    ['triplet', 500 / 3, 3],
+    ['sixteenth', 125, 4],
+  ] as const)('applies %s timing without changing the time signature', async (rhythm, interval, rate) => {
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => {
+      result.current.selectClickRhythm(rhythm);
+    });
+
+    expect(result.current.timeSignature).toBe('4/4');
+    expect(result.current.intervalMs).toBeCloseTo(interval);
+    expect(mockNativeMetronome.setClickRate).toHaveBeenLastCalledWith(rate);
   });
 
   test('commits four steady taps and eases the displayed number to the measured tempo', async () => {

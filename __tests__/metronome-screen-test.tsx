@@ -8,7 +8,7 @@ jest.mock('@/native/metronome', () => ({
     stop: jest.fn(),
     setTempo: jest.fn(),
     setTimeSignature: jest.fn(),
-    setSubdivision: jest.fn(),
+    setClickRate: jest.fn(),
     addListener: jest.fn(() => ({ remove: jest.fn() })),
   },
 }));
@@ -37,9 +37,9 @@ describe('<MetronomeScreen />', () => {
     expect(queryByText('Explore')).toBeNull();
     expect(getByLabelText('Beats per measure, 4')).toBeTruthy();
     expect(getByLabelText('Note type, quarter note')).toBeTruthy();
-    expect(getByTestId('note-value-glyph-4')).toBeTruthy();
-    expect(getByLabelText('Subdivision, quarter notes')).toBeTruthy();
-    expect(getByTestId('subdivision-glyph-1')).toBeTruthy();
+    expect(getByLabelText('Quarter click rhythm, selected')).toBeTruthy();
+    expect(getByTestId('click-rhythm-picker')).toBeTruthy();
+    expect(getByTestId('click-rhythm-selection')).toBeTruthy();
   });
 
   test('builds 3/4, shows three beat dots, and makes beat one distinct without a label', async () => {
@@ -102,7 +102,7 @@ describe('<MetronomeScreen />', () => {
   });
 
   test('creates an uncommon 7/8 meter with seven dots', async () => {
-    const { getAllByTestId, getByLabelText, getByTestId } = await render(
+    const { getAllByTestId, getByLabelText, queryAllByTestId } = await render(
       <MetronomeScreen />
     );
 
@@ -117,7 +117,7 @@ describe('<MetronomeScreen />', () => {
 
     expect(getByLabelText('Beats per measure, 7')).toBeTruthy();
     expect(getByLabelText('Note type, eighth note')).toBeTruthy();
-    expect(getByTestId('note-value-glyph-8')).toBeTruthy();
+    expect(queryAllByTestId(/note-value-glyph/)).toHaveLength(0);
     expect(getAllByTestId('beat-dot')).toHaveLength(7);
   });
 
@@ -146,7 +146,7 @@ describe('<MetronomeScreen />', () => {
     expect(queryAllByTestId('meter-scrubber-glass')).toHaveLength(0);
   });
 
-  test('shows triplets as a separate notation control and three growth phases', async () => {
+  test('shows six peer rhythm choices and gives triplets three audible phases', async () => {
     const nativeMetronome = jest.requireMock('@/native/metronome').NativeMetronome;
     let beatListener:
       | ((event: { beat: number; phase: number; phaseCount: number }) => void)
@@ -160,21 +160,19 @@ describe('<MetronomeScreen />', () => {
         return { remove: jest.fn() };
       }
     );
-    const { getByLabelText, getByTestId, queryByText } = await render(
+    const { getAllByTestId, getByLabelText, getByText, queryAllByTestId } = await render(
       <MetronomeScreen />
     );
 
-    for (let step = 0; step < 2; step += 1) {
-      await fireEvent(
-        getByLabelText(step === 0 ? 'Subdivision, quarter notes' : 'Subdivision, eighth notes'),
-        'accessibilityAction',
-        { nativeEvent: { actionName: 'increment' } }
-      );
+    expect(getAllByTestId('click-rhythm-option')).toHaveLength(6);
+    for (const label of ['Whole', 'Half', 'Quarter', 'Eighth', 'Triplet', '16th']) {
+      expect(getByText(label)).toBeTruthy();
     }
-    expect(getByLabelText('Subdivision, eighth-note triplets')).toBeTruthy();
-    expect(getByTestId('subdivision-glyph-3')).toBeTruthy();
+    expect(queryAllByTestId(/subdivision-glyph|note-value-glyph/)).toHaveLength(0);
+
+    await fireEvent.press(getByLabelText('Triplet click rhythm'));
+    expect(getByLabelText('Triplet click rhythm, selected')).toBeTruthy();
     expect(getByLabelText('Note type, quarter note')).toBeTruthy();
-    expect(queryByText('Triplets')).toBeNull();
 
     await fireEvent.press(getByLabelText('Start metronome'));
     await act(async () => {

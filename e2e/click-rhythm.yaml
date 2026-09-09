@@ -12,13 +12,15 @@ appId: com.marginallybetterapps.musictools
 - assertVisible: "Tempo, 120 BPM"
 - assertVisible: "Beats per measure, 4"
 - assertVisible: "Note type, quarter note"
-- assertVisible: "Subdivision, quarter notes"
-- startRecording: triplet-subdivision
-- swipe:
-    start: 50%, 60%
-    end: 60%, 60%
-    duration: 650
-- assertVisible: "Subdivision, eighth-note triplets"
+- assertVisible: "Quarter click rhythm, selected"
+- assertVisible: "Whole click rhythm"
+- assertVisible: "Half click rhythm"
+- assertVisible: "Eighth click rhythm"
+- assertVisible: "Triplet click rhythm"
+- assertVisible: "16th click rhythm"
+- startRecording: click-rhythm-triplet
+- tapOn: "Triplet click rhythm"
+- assertVisible: "Triplet click rhythm, selected"
 - assertVisible: "Note type, quarter note"
 - tapOn: "Start metronome"
 - assertVisible: "Stop metronome"

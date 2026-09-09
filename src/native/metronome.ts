@@ -11,11 +11,11 @@ type NativeMetronomeEvents = {
 };
 
 declare class NativeMetronomeModule extends NativeModule<NativeMetronomeEvents> {
-  start(bpm: number, beatsPerMeasure: number, subdivision: number): void;
+  start(bpm: number, beatsPerMeasure: number, clickRate: number): void;
   stop(): void;
   setTempo(bpm: number): void;
   setTimeSignature(beatsPerMeasure: number): void;
-  setSubdivision(subdivision: number): void;
+  setClickRate(clickRate: number): void;
 }
 
 const iosMetronome = requireOptionalNativeModule<NativeMetronomeModule>('NativeMetronome');
@@ -25,7 +25,7 @@ const unavailableMetronome = {
   stop() {},
   setTempo() {},
   setTimeSignature() {},
-  setSubdivision() {},
+  setClickRate() {},
   addListener() {
     return { remove() {} };
   },

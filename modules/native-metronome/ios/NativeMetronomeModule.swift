@@ -6,7 +6,7 @@ private let minimumBPM = 30
 private let maximumBPM = 300
 private let minimumBeatsPerMeasure = 1
 private let maximumBeatsPerMeasure = 32
-private let supportedSubdivisions = [1, 2, 3, 4]
+private let supportedClickRates = [0.25, 0.5, 1.0, 2.0, 3.0, 4.0]
 private let sampleRate = 48_000.0
 private let startLeadTime = 0.04
 
@@ -31,7 +31,7 @@ private final class MetronomeClock {
   private var beat = 0
   private var phase = 0
   private var beatsPerMeasure = 4
-  private var subdivision = 1
+  private var clickRate = 1.0
   private var currentBPM = 120
 
   init() {
@@ -43,7 +43,7 @@ private final class MetronomeClock {
   func start(
     bpm: Int,
     beatsPerMeasure: Int,
-    subdivision: Int,
+    clickRate: Double,
     onBeat: @escaping (Int, Int, Int) -> Void
   ) {
     clockQueue.async { [weak self] in
@@ -52,7 +52,7 @@ private final class MetronomeClock {
       self.beat = 0
       self.phase = 0
       self.beatsPerMeasure = self.normalizedBeatsPerMeasure(beatsPerMeasure)
-      self.subdivision = self.normalizedSubdivision(subdivision)
+      self.clickRate = self.normalizedClickRate(clickRate)
       self.isPlaying = true
 
       do {
@@ -102,10 +102,10 @@ private final class MetronomeClock {
     }
   }
 
-  func setSubdivision(_ subdivision: Int) {
+  func setClickRate(_ clickRate: Double) {
     clockQueue.async { [weak self] in
       guard let self else { return }
-      self.subdivision = self.normalizedSubdivision(subdivision)
+      self.clickRate = self.normalizedClickRate(clickRate)
       self.beat = 0
       self.phase = 0
       guard self.isPlaying else { return }
@@ -127,7 +127,7 @@ private final class MetronomeClock {
   private func beginLoop(bpm: Int, after delay: TimeInterval) {
     let clampedBPM = min(maximumBPM, max(minimumBPM, bpm))
     currentBPM = clampedBPM
-    let interval = 60.0 / Double(clampedBPM) / Double(subdivision)
+    let interval = 60.0 / Double(clampedBPM) / clickRate
     let intervalNanoseconds = Int(interval * 1_000_000_000)
     let buffer = makeMeasureBuffer(bpm: clampedBPM)
 
@@ -161,9 +161,9 @@ private final class MetronomeClock {
 
   private func makeMeasureBuffer(bpm: Int) -> AVAudioPCMBuffer {
     let intervalFrames = AVAudioFrameCount(
-      (sampleRate * 60.0 / Double(bpm) / Double(subdivision)).rounded()
+      (sampleRate * 60.0 / Double(bpm) / clickRate).rounded()
     )
-    let pulseCount = beatsPerMeasure * phaseCount
+    let pulseCount = measurePulseCount
     let measureFrames = intervalFrames * AVAudioFrameCount(pulseCount)
     let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: measureFrames)!
     buffer.frameLength = measureFrames
@@ -194,7 +194,18 @@ private final class MetronomeClock {
   }
 
   private var phaseCount: Int {
-    subdivision
+    max(1, Int(clickRate.rounded()))
+  }
+
+  private var beatStride: Int {
+    clickRate < 1 ? Int((1 / clickRate).rounded()) : 1
+  }
+
+  private var measurePulseCount: Int {
+    if beatStride == 1 {
+      return beatsPerMeasure * phaseCount
+    }
+    return beatsPerMeasure / greatestCommonDivisor(beatsPerMeasure, beatStride)
   }
 
   private func advancePulse() {
@@ -202,6 +213,12 @@ private final class MetronomeClock {
   }
 
   private func nextPulse(afterBeat beat: Int, phase: Int) -> (Int, Int) {
+    if beat == 0 {
+      return (1, 1)
+    }
+    if beatStride > 1 {
+      return (((beat - 1 + beatStride) % beatsPerMeasure) + 1, 1)
+    }
     if beat == 0 || phase >= phaseCount {
       return ((beat % beatsPerMeasure) + 1, 1)
     }
@@ -224,8 +241,19 @@ private final class MetronomeClock {
     min(maximumBeatsPerMeasure, max(minimumBeatsPerMeasure, beats))
   }
 
-  private func normalizedSubdivision(_ value: Int) -> Int {
-    supportedSubdivisions.contains(value) ? value : 1
+  private func normalizedClickRate(_ value: Double) -> Double {
+    supportedClickRates.contains(value) ? value : 1
+  }
+
+  private func greatestCommonDivisor(_ lhs: Int, _ rhs: Int) -> Int {
+    var a = lhs
+    var b = rhs
+    while b != 0 {
+      let remainder = a % b
+      a = b
+      b = remainder
+    }
+    return a
   }
 
   private func stopLocked() {
@@ -251,11 +279,11 @@ public final class NativeMetronomeModule: Module {
 
     Events("onBeat")
 
-    Function("start") { (bpm: Int, beatsPerMeasure: Int, subdivision: Int) in
+    Function("start") { (bpm: Int, beatsPerMeasure: Int, clickRate: Double) in
       self.clock.start(
         bpm: bpm,
         beatsPerMeasure: beatsPerMeasure,
-        subdivision: subdivision
+        clickRate: clickRate
       ) { [weak self] beat, phase, phaseCount in
         self?.sendEvent(
           "onBeat",
@@ -276,8 +304,8 @@ public final class NativeMetronomeModule: Module {
       self.clock.setTimeSignature(beatsPerMeasure)
     }
 
-    Function("setSubdivision") { (subdivision: Int) in
-      self.clock.setSubdivision(subdivision)
+    Function("setClickRate") { (clickRate: Double) in
+      self.clock.setClickRate(clickRate)
     }
 
     OnAppEntersBackground {

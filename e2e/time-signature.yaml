@@ -12,7 +12,7 @@ appId: com.marginallybetterapps.musictools
 - assertVisible: "Tempo, 120 BPM"
 - assertVisible: "Beats per measure, 4"
 - assertVisible: "Note type, quarter note"
-- assertVisible: "Subdivision, quarter notes"
+- assertVisible: "Quarter click rhythm, selected"
 - assertNotVisible: "Time signature"
 - assertNotVisible: "Drag numbers"
 - assertNotVisible: "Tap"
@@ -32,7 +32,7 @@ appId: com.marginallybetterapps.musictools
     duration: 500
 - assertVisible: "Beats per measure, 7"
 - assertVisible: "Note type, eighth note"
-- assertVisible: "Subdivision, eighth notes"
+- assertVisible: "Quarter click rhythm, selected"
 - assertNotVisible: "Downbeat"
 - tapOn: "Start metronome"
 - assertVisible: "Stop metronome"
