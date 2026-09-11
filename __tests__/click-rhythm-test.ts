@@ -19,12 +19,12 @@ describe('click rhythms', () => {
 
   test('uses standard SMuFL notation glyphs instead of text abbreviations', () => {
     expect(CLICK_RHYTHMS.map(({ id, glyph }) => [id, glyph])).toEqual([
-      ['whole', '\uECA2'],
-      ['half', '\uECA3'],
-      ['quarter', '\uECA5'],
-      ['eighth', '\uECA7'],
-      ['triplet', '\uECA7'],
-      ['sixteenth', '\uECA9'],
+      ['whole', '\uE1D2'],
+      ['half', '\uE1D3'],
+      ['quarter', '\uE1D5'],
+      ['eighth', '\uE1D7'],
+      ['triplet', '\uE1D7'],
+      ['sixteenth', '\uE1D9'],
     ]);
     const triplet = CLICK_RHYTHMS.find(({ id }) => id === 'triplet');
     expect(triplet && 'tupletGlyph' in triplet ? triplet.tupletGlyph : undefined).toBe('\uE883');

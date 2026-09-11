@@ -1,16 +1,16 @@
 export const CLICK_RHYTHMS = [
-  { id: 'whole', label: 'Whole', rate: 0.25, glyph: '\uECA2' },
-  { id: 'half', label: 'Half', rate: 0.5, glyph: '\uECA3' },
-  { id: 'quarter', label: 'Quarter', rate: 1, glyph: '\uECA5' },
-  { id: 'eighth', label: 'Eighth', rate: 2, glyph: '\uECA7' },
+  { id: 'whole', label: 'Whole', rate: 0.25, glyph: '\uE1D2' },
+  { id: 'half', label: 'Half', rate: 0.5, glyph: '\uE1D3' },
+  { id: 'quarter', label: 'Quarter', rate: 1, glyph: '\uE1D5' },
+  { id: 'eighth', label: 'Eighth', rate: 2, glyph: '\uE1D7' },
   {
     id: 'triplet',
     label: 'Triplet',
     rate: 3,
-    glyph: '\uECA7',
+    glyph: '\uE1D7',
     tupletGlyph: '\uE883',
   },
-  { id: 'sixteenth', label: '16th', rate: 4, glyph: '\uECA9' },
+  { id: 'sixteenth', label: '16th', rate: 4, glyph: '\uE1D9' },
 ] as const;
 
 export type ClickRhythm = (typeof CLICK_RHYTHMS)[number]['id'];

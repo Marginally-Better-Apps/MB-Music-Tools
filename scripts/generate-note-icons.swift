@@ -17,12 +17,12 @@ guard CTFontManagerRegisterFontsForURL(fontURL as CFURL, .process, &registration
 try FileManager.default.createDirectory(at: outputURL, withIntermediateDirectories: true)
 
 let notes: [(name: String, glyph: String)] = [
-  ("whole", "\u{ECA2}"),
-  ("half", "\u{ECA3}"),
-  ("quarter", "\u{ECA5}"),
-  ("eighth", "\u{ECA7}"),
-  ("triplet", "\u{ECA7}"),
-  ("sixteenth", "\u{ECA9}"),
+  ("whole", "\u{E1D2}"),
+  ("half", "\u{E1D3}"),
+  ("quarter", "\u{E1D5}"),
+  ("eighth", "\u{E1D7}"),
+  ("triplet", "\u{E1D7}"),
+  ("sixteenth", "\u{E1D9}"),
 ]
 
 let palettes: [(name: String, color: NSColor)] = [
@@ -31,8 +31,7 @@ let palettes: [(name: String, color: NSColor)] = [
 ]
 
 let canvasSize = NSSize(width: 96, height: 120)
-let noteFont = NSFont(name: "BravuraText", size: 84)!
-let tripletFont = NSFont.systemFont(ofSize: 38, weight: .semibold)
+let tripletFont = NSFont.systemFont(ofSize: 30, weight: .semibold)
 
 func centeredOrigin(for text: NSAttributedString, in size: NSSize) -> NSPoint {
   let bounds = text.boundingRect(
@@ -52,6 +51,8 @@ for note in notes {
     NSColor.clear.setFill()
     NSRect(origin: .zero, size: canvasSize).fill()
 
+    let noteFontSize: CGFloat = note.name == "whole" ? 116 : 74
+    let noteFont = NSFont(name: "BravuraText", size: noteFontSize)!
     let glyph = NSAttributedString(
       string: note.glyph,
       attributes: [
@@ -60,6 +61,9 @@ for note in notes {
       ]
     )
     var glyphOrigin = centeredOrigin(for: glyph, in: canvasSize)
+    if note.name != "whole" {
+      glyphOrigin.y -= 5
+    }
     if note.name == "triplet" {
       glyphOrigin.x += 8
     }
@@ -73,7 +77,7 @@ for note in notes {
           .foregroundColor: palette.color,
         ]
       )
-      numeral.draw(at: NSPoint(x: 9, y: 70))
+      numeral.draw(at: NSPoint(x: 12, y: 65))
     }
 
     image.unlockFocus()
