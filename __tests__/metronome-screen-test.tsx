@@ -25,6 +25,56 @@ jest.mock('expo-glass-effect', () => {
   };
 });
 
+jest.mock('@expo/ui/swift-ui', () => {
+  const React = jest.requireActual('react');
+  const { Text: NativeText, View } = jest.requireActual('react-native');
+
+  return {
+    Host: ({ children, ...props }: { children: React.ReactNode }) =>
+      React.createElement(View, props, children),
+    Image: ({ modifiers = [], ...props }: { modifiers?: { type: string; label?: string }[] }) =>
+      React.createElement(View, {
+        ...props,
+        accessibilityLabel: modifiers.find(({ type }) => type === 'accessibilityLabel')?.label,
+        modifiers,
+        testID: 'click-rhythm-option',
+      }),
+    Picker: ({ children, ...props }: { children: React.ReactNode }) =>
+      React.createElement(View, props, children),
+    Text: ({
+      children,
+      modifiers = [],
+      ...props
+    }: {
+      children: React.ReactNode;
+      modifiers?: { type: string; label?: string }[];
+    }) => {
+      const tagged = modifiers.some(({ type }) => type === 'tag');
+      return React.createElement(
+        NativeText,
+        {
+          ...props,
+          accessibilityLabel: modifiers.find(({ type }) => type === 'accessibilityLabel')?.label,
+          modifiers,
+          testID: tagged ? 'click-rhythm-text-option' : undefined,
+        },
+        children
+      );
+    },
+  };
+});
+
+jest.mock('@expo/ui/swift-ui/modifiers', () => ({
+  accessibilityLabel: (label: string) => ({ type: 'accessibilityLabel', label }),
+  aspectRatio: (configuration: object) => ({ type: 'aspectRatio', ...configuration }),
+  controlSize: (size: string) => ({ type: 'controlSize', size }),
+  font: (configuration: object) => ({ type: 'font', ...configuration }),
+  frame: (configuration: object) => ({ type: 'frame', ...configuration }),
+  pickerStyle: (style: string) => ({ type: 'pickerStyle', style }),
+  resizable: () => ({ type: 'resizable' }),
+  tag: (value: string) => ({ type: 'tag', value }),
+}));
+
 describe('<MetronomeScreen />', () => {
   test('shows a large default tempo and a play control a stranger can find', async () => {
     const { getByLabelText, getByTestId, getByText, queryByText } = await render(
@@ -38,9 +88,9 @@ describe('<MetronomeScreen />', () => {
     expect(queryByText('Explore')).toBeNull();
     expect(getByLabelText('Beats per measure, 4')).toBeTruthy();
     expect(getByLabelText('Note type, quarter note')).toBeTruthy();
-    expect(getByLabelText('Quarter click rhythm, selected')).toBeTruthy();
+    expect(getByLabelText('Quarter click rhythm')).toBeTruthy();
     expect(getByTestId('click-rhythm-picker')).toBeTruthy();
-    expect(getByTestId('click-rhythm-selection')).toBeTruthy();
+    expect(getByTestId('native-click-rhythm-picker').props.selection).toBe('quarter');
   });
 
   test('builds 3/4, shows three beat dots, and makes beat one distinct without a label', async () => {
@@ -161,7 +211,7 @@ describe('<MetronomeScreen />', () => {
         return { remove: jest.fn() };
       }
     );
-    const { getAllByTestId, getByLabelText, queryAllByTestId, queryByText } = await render(
+    const { getAllByTestId, getByLabelText, getByTestId, queryAllByTestId, queryByText } = await render(
       <MetronomeScreen />
     );
 
@@ -169,11 +219,21 @@ describe('<MetronomeScreen />', () => {
     for (const label of ['Whole', 'Half', 'Quarter', 'Eighth', 'Triplet', '16th']) {
       expect(queryByText(label)).toBeNull();
     }
-    expect(getAllByTestId('click-rhythm-icon', { includeHiddenElements: true })).toHaveLength(6);
     expect(queryAllByTestId(/subdivision-glyph|note-value-glyph/)).toHaveLength(0);
+    for (const option of getAllByTestId('click-rhythm-option', {
+      includeHiddenElements: true,
+    })) {
+      expect(option.props.modifiers).toContainEqual({ type: 'resizable' });
+      expect(option.props.modifiers).toContainEqual({
+        type: 'frame',
+        width: 24,
+        height: 30,
+      });
+    }
 
-    await fireEvent.press(getByLabelText('Triplet click rhythm'));
-    expect(getByLabelText('Triplet click rhythm, selected')).toBeTruthy();
+    await fireEvent(getByTestId('native-click-rhythm-picker'), 'selectionChange', 'triplet');
+    expect(getByTestId('native-click-rhythm-picker').props.selection).toBe('triplet');
+    expect(getByLabelText('Triplet click rhythm')).toBeTruthy();
     expect(getByLabelText('Note type, quarter note')).toBeTruthy();
 
     await fireEvent.press(getByLabelText('Start metronome'));
@@ -199,15 +259,16 @@ describe('<MetronomeScreen />', () => {
 
     expect(slots).toHaveLength(4);
     for (const slot of slots) {
-      expect(StyleSheet.flatten(slot.props.style)).toMatchObject({ width: 42, height: 42 });
+      expect(StyleSheet.flatten(slot.props.style)).toMatchObject({ width: 48, height: 48 });
     }
     for (const dot of dots) {
       expect(StyleSheet.flatten(dot.props.style)).toMatchObject({
-        width: 24,
-        height: 24,
+        width: 36,
+        height: 36,
       });
       expect(StyleSheet.flatten(dot.props.style).transform).toBeUndefined();
-      expect(dot.props.glassEffectStyle).toBeUndefined();
+      expect(dot.props.glassEffectStyle).toBe('clear');
+      expect(dot.props.isInteractive).toBe(true);
     }
   });
 

@@ -7,7 +7,7 @@ export const CLICK_RHYTHMS = [
     id: 'triplet',
     label: 'Triplet',
     rate: 3,
-    glyph: '\uECA7\uECA7\uECA7',
+    glyph: '\uECA7',
     tupletGlyph: '\uE883',
   },
   { id: 'sixteenth', label: '16th', rate: 4, glyph: '\uECA9' },

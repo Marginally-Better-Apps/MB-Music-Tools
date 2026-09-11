@@ -23,7 +23,7 @@ describe('click rhythms', () => {
       ['half', '\uECA3'],
       ['quarter', '\uECA5'],
       ['eighth', '\uECA7'],
-      ['triplet', '\uECA7\uECA7\uECA7'],
+      ['triplet', '\uECA7'],
       ['sixteenth', '\uECA9'],
     ]);
     const triplet = CLICK_RHYTHMS.find(({ id }) => id === 'triplet');

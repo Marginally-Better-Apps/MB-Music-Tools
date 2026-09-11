@@ -1,24 +1,53 @@
-import { useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  LayoutChangeEvent,
-  PanResponder,
-  Pressable,
+  Image as ReactNativeImage,
+  ImageSourcePropType,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Host, Image, Picker } from '@expo/ui/swift-ui';
 import {
-  GlassView,
-  isGlassEffectAPIAvailable,
-  isLiquidGlassAvailable,
-} from 'expo-glass-effect';
-import * as Haptics from 'expo-haptics';
+  accessibilityLabel,
+  aspectRatio,
+  controlSize,
+  frame,
+  pickerStyle,
+  resizable,
+  tag,
+} from '@expo/ui/swift-ui/modifiers';
 
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 import { ClickRhythm, CLICK_RHYTHMS } from '@/lib/click-rhythm';
 
-const TRACK_INSET = 3;
+const NOTE_ICONS: Record<
+  ClickRhythm,
+  { dark: ImageSourcePropType; light: ImageSourcePropType }
+> = {
+  whole: {
+    light: require('../../assets/images/note-rhythms/whole-light.png'),
+    dark: require('../../assets/images/note-rhythms/whole-dark.png'),
+  },
+  half: {
+    light: require('../../assets/images/note-rhythms/half-light.png'),
+    dark: require('../../assets/images/note-rhythms/half-dark.png'),
+  },
+  quarter: {
+    light: require('../../assets/images/note-rhythms/quarter-light.png'),
+    dark: require('../../assets/images/note-rhythms/quarter-dark.png'),
+  },
+  eighth: {
+    light: require('../../assets/images/note-rhythms/eighth-light.png'),
+    dark: require('../../assets/images/note-rhythms/eighth-dark.png'),
+  },
+  triplet: {
+    light: require('../../assets/images/note-rhythms/triplet-light.png'),
+    dark: require('../../assets/images/note-rhythms/triplet-dark.png'),
+  },
+  sixteenth: {
+    light: require('../../assets/images/note-rhythms/sixteenth-light.png'),
+    dark: require('../../assets/images/note-rhythms/sixteenth-dark.png'),
+  },
+};
 
 type ClickRhythmPickerProps = {
   onChange: (rhythm: ClickRhythm) => void;
@@ -27,190 +56,44 @@ type ClickRhythmPickerProps = {
 
 export function ClickRhythmPicker({ onChange, value }: ClickRhythmPickerProps) {
   const theme = useTheme();
-  const supportsGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
-  const Track = supportsGlass ? GlassView : View;
-  const selectedIndex = CLICK_RHYTHMS.findIndex(({ id }) => id === value);
-  const [trackWidth, setTrackWidth] = useState(0);
-  const [position] = useState(() => new Animated.Value(selectedIndex));
-  const trackWidthRef = useRef(trackWidth);
-  const valueRef = useRef(value);
-  const onChangeRef = useRef(onChange);
-  const lastDragIndex = useRef(selectedIndex);
-  const segmentWidth = Math.max(0, (trackWidth - TRACK_INSET * 2) / CLICK_RHYTHMS.length);
-
-  useEffect(() => {
-    trackWidthRef.current = trackWidth;
-    valueRef.current = value;
-    onChangeRef.current = onChange;
-    lastDragIndex.current = selectedIndex;
-
-    Animated.spring(position, {
-      toValue: selectedIndex,
-      damping: 19,
-      stiffness: 260,
-      mass: 0.72,
-      useNativeDriver: true,
-    }).start();
-  }, [onChange, position, selectedIndex, trackWidth, value]);
-
-  const selectIndex = (index: number) => {
-    const option = CLICK_RHYTHMS[index];
-    if (option && option.id !== valueRef.current) {
-      valueRef.current = option.id;
-      void Haptics.selectionAsync();
-      onChangeRef.current(option.id);
-    }
-  };
-
-  const indexAt = (x: number) => {
-    const usableWidth = trackWidthRef.current - TRACK_INSET * 2;
-    const width = usableWidth / CLICK_RHYTHMS.length;
-    return Math.max(
-      0,
-      Math.min(CLICK_RHYTHMS.length - 1, Math.floor((x - TRACK_INSET) / width))
-    );
-  };
-
-  // A horizontal drag can scrub through the same six choices as a tap.
-  // eslint-disable-next-line react-hooks/refs
-  const [panResponder] = useState(() =>
-    PanResponder.create({
-      onMoveShouldSetPanResponderCapture: (_, gesture) =>
-        Math.abs(gesture.dx) > 5 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
-      onPanResponderGrant: (event) => {
-        const index = indexAt(event.nativeEvent.locationX);
-        lastDragIndex.current = index;
-        selectIndex(index);
-      },
-      onPanResponderMove: (event) => {
-        const index = indexAt(event.nativeEvent.locationX);
-        if (index !== lastDragIndex.current) {
-          lastDragIndex.current = index;
-          selectIndex(index);
-        }
-      },
-      onPanResponderTerminationRequest: () => false,
-    })
-  );
-
-  const handleLayout = (event: LayoutChangeEvent) => {
-    setTrackWidth(event.nativeEvent.layout.width);
-  };
+  const palette = useColorScheme() === 'dark' ? 'dark' : 'light';
 
   return (
-    <Track
-      glassEffectStyle="clear"
-      tintColor={theme.backgroundElement}
-      onLayout={handleLayout}
-      style={[
-        styles.track,
-        { backgroundColor: supportsGlass ? 'transparent' : theme.backgroundElement },
-      ]}
-      testID="click-rhythm-picker"
-      {...panResponder.panHandlers}>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.selection,
-          {
-            backgroundColor: theme.backgroundSelected,
-            shadowColor: theme.text,
-            transform: [
-              { translateX: Animated.multiply(position, segmentWidth) },
-            ],
-            width: segmentWidth,
-          },
-        ]}
-        testID="click-rhythm-selection"
-      />
-
-      {CLICK_RHYTHMS.map((option, index) => {
-        const selected = option.id === value;
-        const color = selected ? theme.text : theme.textSecondary;
-        return (
-          <Pressable
-            accessibilityLabel={`${option.label} click rhythm${selected ? ', selected' : ''}`}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            key={option.id}
-            onPress={() => selectIndex(index)}
-            style={({ pressed }) => [styles.option, pressed && styles.pressed]}
-            testID="click-rhythm-option">
-            <View
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              style={styles.iconFrame}
-              testID="click-rhythm-icon">
-              {'tupletGlyph' in option ? (
-                <>
-                  <Text style={[styles.tupletNumber, { color }]}>{option.tupletGlyph}</Text>
-                  <Text style={[styles.tripletNotes, { color }]}>{option.glyph}</Text>
-                </>
-              ) : (
-                <Text style={[styles.noteGlyph, { color }]}>{option.glyph}</Text>
-              )}
-            </View>
-          </Pressable>
-        );
-      })}
-    </Track>
+    <View style={styles.shell} testID="click-rhythm-picker">
+      <Host seedColor={theme.accent} style={styles.host}>
+        <Picker
+          label="Click rhythm"
+          modifiers={[pickerStyle('segmented'), controlSize('large')]}
+          onSelectionChange={onChange}
+          selection={value}
+          testID="native-click-rhythm-picker">
+          {CLICK_RHYTHMS.map((option) => (
+            <Image
+              key={option.id}
+              uiImage={ReactNativeImage.resolveAssetSource(NOTE_ICONS[option.id][palette]).uri}
+              modifiers={[
+                tag(option.id),
+                accessibilityLabel(`${option.label} click rhythm`),
+                resizable(),
+                aspectRatio({ contentMode: 'fit' }),
+                frame({ width: 24, height: 30 }),
+              ]}
+            />
+          ))}
+        </Picker>
+      </Host>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  track: {
+  shell: {
     width: '100%',
     maxWidth: 380,
-    height: 54,
-    padding: TRACK_INSET,
-    borderRadius: 27,
-    flexDirection: 'row',
-    overflow: 'hidden',
+    height: 56,
   },
-  selection: {
-    position: 'absolute',
-    left: TRACK_INSET,
-    top: TRACK_INSET,
-    bottom: TRACK_INSET,
-    borderRadius: 24,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-  },
-  option: {
-    flex: 1,
-    zIndex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.56,
-  },
-  iconFrame: {
+  host: {
     width: '100%',
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  noteGlyph: {
-    fontFamily: 'Bravura Text',
-    fontSize: 34,
-    lineHeight: 40,
-    textAlign: 'center',
-  },
-  tripletNotes: {
-    fontFamily: 'Bravura Text',
-    fontSize: 17,
-    lineHeight: 22,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  tupletNumber: {
-    position: 'absolute',
-    top: 0,
-    fontFamily: 'Bravura Text',
-    fontSize: 12,
-    lineHeight: 14,
-    textAlign: 'center',
+    height: 56,
   },
 });

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { GlassView } from 'expo-glass-effect';
 
 import { useTheme } from '@/hooks/use-theme';
 import { TimeSignature } from '@/lib/time-signature';
 
-const DOT_SIZE = 24;
-const DOT_SLOT_SIZE = 42;
+const DOT_SIZE = 36;
+const DOT_SLOT_SIZE = 48;
 
 type MetronomeBeatProps = {
   beat: number;
@@ -49,7 +50,7 @@ export function MetronomeBeat({
 
   const activeScale = pulse.interpolate({
     inputRange: [0, 1],
-    outputRange: [1, isDownbeat ? 1.52 : 1.4],
+    outputRange: [1, isDownbeat ? 1.78 : 1.6],
   });
 
   const accessibilityValue = !playing
@@ -91,14 +92,18 @@ export function MetronomeBeat({
                   testID="beat-pulse"
                 />
               ) : null}
-              <View
+              <GlassView
+                glassEffectStyle="clear"
+                hitSlop={6}
+                isInteractive
                 testID="beat-dot"
+                tintColor={isActive ? theme.accentSoft : theme.backgroundElement}
                 style={[
                   styles.dot,
                   {
-                    backgroundColor: isActive ? theme.accent : theme.backgroundElement,
+                    backgroundColor: 'transparent',
                     borderColor: isFirst || isActive ? theme.accent : theme.textSecondary,
-                    borderWidth: isFirst || isActive ? 1.5 : StyleSheet.hairlineWidth,
+                    borderWidth: isFirst || isActive ? 2 : StyleSheet.hairlineWidth,
                   },
                 ]}
               />
@@ -113,18 +118,18 @@ export function MetronomeBeat({
 const styles = StyleSheet.create({
   stage: {
     width: '100%',
-    minHeight: 54,
+    minHeight: 72,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dotField: {
     width: '100%',
-    maxWidth: 320,
+    maxWidth: 360,
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
   },
   dotSlot: {
     width: DOT_SLOT_SIZE,
@@ -142,7 +147,7 @@ const styles = StyleSheet.create({
     width: DOT_SIZE,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
-    borderWidth: 1.5,
+    borderWidth: 2,
     shadowOffset: { width: 0, height: 2 },
   },
 });
