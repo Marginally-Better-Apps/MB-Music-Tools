@@ -1,0 +1,27 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp
+- repeat:
+    times: 3
+    while:
+      notVisible: "Start metronome"
+    commands:
+      - tapOn:
+          text: "Metronome"
+          retryTapIfNoChange: true
+- assertVisible: "Beats per measure, 4"
+- assertVisible: "Beat unit, 4"
+- repeat:
+    times: 4
+    commands:
+      - swipe:
+          start: 50%, 34%
+          end: 88%, 34%
+          duration: 700
+- swipe:
+    start: 50%, 43%
+    end: 88%, 43%
+    duration: 700
+- assertVisible: "Beats per measure, 32"
+- assertVisible: "Beat unit, 32"
+- assertVisible: "Start metronome"

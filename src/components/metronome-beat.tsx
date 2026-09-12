@@ -1,100 +1,153 @@
 import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import {
-  GlassView,
-  isGlassEffectAPIAvailable,
-  isLiquidGlassAvailable,
-} from 'expo-glass-effect';
+import { GlassView } from 'expo-glass-effect';
 
 import { useTheme } from '@/hooks/use-theme';
+import { TimeSignature } from '@/lib/time-signature';
 
-const PULSE_SIZE = 184;
-const RESTING_SCALE = 0.72;
+const DOT_SIZE = 36;
+const DOT_SLOT_SIZE = 48;
 
 type MetronomeBeatProps = {
   beat: number;
+  beatPhase: number;
+  beatPhaseCount: number;
+  beatsPerMeasure: number;
   playing: boolean;
   intervalMs: number;
+  timeSignature: TimeSignature;
 };
 
-export function MetronomeBeat({ beat, playing, intervalMs }: MetronomeBeatProps) {
+export function MetronomeBeat({
+  beat,
+  beatPhase,
+  beatPhaseCount,
+  beatsPerMeasure,
+  playing,
+  intervalMs,
+  timeSignature,
+}: MetronomeBeatProps) {
   const theme = useTheme();
-  const [scale] = useState(() => new Animated.Value(RESTING_SCALE));
-  const supportsGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
-  const Pulse = supportsGlass ? GlassView : View;
+  const [pulse] = useState(() => new Animated.Value(0));
+  const isDownbeat = playing && beat === 1 && beatPhase === 1;
 
   useEffect(() => {
-    if (!playing) {
-      const rest = Animated.spring(scale, {
-        toValue: RESTING_SCALE,
-        damping: 17,
-        stiffness: 180,
-        mass: 0.8,
-        useNativeDriver: true,
-      });
-      rest.start();
-      return () => rest.stop();
-    }
-
-    if (beat === 0) {
+    if (!playing || beat === 0) {
+      pulse.setValue(0);
       return;
     }
 
-    const pulse = Animated.sequence([
-      Animated.timing(scale, {
-        toValue: 1,
-        duration: Math.min(90, intervalMs * 0.2),
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(scale, {
-        toValue: RESTING_SCALE,
-        duration: Math.max(90, intervalMs * 0.68),
-        easing: Easing.inOut(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]);
-    pulse.start();
-    return () => pulse.stop();
-  }, [beat, intervalMs, playing, scale]);
+    if (beatPhase === 1) pulse.setValue(0);
+    const animation = Animated.timing(pulse, {
+      toValue: beatPhase / beatPhaseCount,
+      duration: Math.min(130, intervalMs * 0.24),
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [beat, beatPhase, beatPhaseCount, intervalMs, playing, pulse]);
+
+  const activeScale = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, isDownbeat ? 1.78 : 1.6],
+  });
+
+  const accessibilityValue = !playing
+    ? `Stopped, ${timeSignature}`
+    : beat === 0
+      ? `Waiting for beat 1, ${timeSignature}`
+      : beatPhaseCount > 1
+        ? `Beat ${beat} of ${beatsPerMeasure}, pulse ${beatPhase} of ${beatPhaseCount}, ${timeSignature}`
+        : `Beat ${beat} of ${beatsPerMeasure}, ${timeSignature}`;
 
   return (
     <View
-      accessibilityLabel={playing ? 'Beat pulse playing' : 'Beat pulse at rest'}
+      accessible
+      accessibilityLabel="Metronome beat"
+      accessibilityValue={{ text: accessibilityValue }}
       style={styles.stage}>
-      <Animated.View style={[styles.pulseSlot, { transform: [{ scale }] }]}>
-        <Pulse
-          testID="metronome-pulse"
-          glassEffectStyle="regular"
-          tintColor={theme.backgroundSelected}
-          style={[
-            styles.pulse,
-            {
-              backgroundColor: supportsGlass ? 'transparent' : theme.backgroundSelected,
-              borderColor: theme.textSecondary,
-            },
-          ]}
-        />
-      </Animated.View>
+      <View style={styles.dotField}>
+        {Array.from({ length: beatsPerMeasure }, (_, index) => {
+          const dotBeat = index + 1;
+          const isActive = playing && beat === dotBeat;
+          const isFirst = dotBeat === 1;
+
+          return (
+            <View key={dotBeat} style={styles.dotSlot} testID="beat-dot-slot">
+              {isActive ? (
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.pulse,
+                    {
+                      backgroundColor: theme.accentSoft,
+                      borderColor: theme.accent,
+                      shadowColor: theme.accent,
+                      shadowOpacity: isDownbeat ? 0.72 : 0.52,
+                      shadowRadius: isDownbeat ? 16 : 11,
+                      transform: [{ scale: activeScale }],
+                    },
+                  ]}
+                  testID="beat-pulse"
+                />
+              ) : null}
+              <GlassView
+                glassEffectStyle="clear"
+                hitSlop={6}
+                isInteractive
+                testID="beat-dot"
+                tintColor={isActive ? theme.accentSoft : theme.backgroundElement}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor: 'transparent',
+                    borderColor: isFirst || isActive ? theme.accent : theme.textSecondary,
+                    borderWidth: isFirst || isActive ? 2 : StyleSheet.hairlineWidth,
+                  },
+                ]}
+              />
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   stage: {
-    width: PULSE_SIZE,
-    height: PULSE_SIZE,
+    width: '100%',
+    minHeight: 72,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pulseSlot: {
-    width: PULSE_SIZE,
-    height: PULSE_SIZE,
+  dotField: {
+    width: '100%',
+    maxWidth: 360,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  dotSlot: {
+    width: DOT_SLOT_SIZE,
+    height: DOT_SLOT_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dot: {
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
   },
   pulse: {
-    width: PULSE_SIZE,
-    height: PULSE_SIZE,
-    borderRadius: PULSE_SIZE / 2,
-    borderWidth: StyleSheet.hairlineWidth,
+    position: 'absolute',
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
+    borderWidth: 2,
+    shadowOffset: { width: 0, height: 2 },
   },
 });
