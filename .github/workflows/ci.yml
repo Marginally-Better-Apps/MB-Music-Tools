@@ -31,6 +31,8 @@ jobs:
         run: python3 scripts/test-semantic-version.py
       - name: Test simulator selection
         run: python3 scripts/test-select-simulator.py
+      - name: Test simulator screenshot capture
+        run: bash scripts/test-capture-ios-screenshot.sh
       - name: Test CI workflow safeguards
         run: python3 scripts/test-ci-workflows.py
       - name: Test Autoloader install link

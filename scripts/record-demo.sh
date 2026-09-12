@@ -24,7 +24,12 @@ if ! java -version >/dev/null 2>&1; then
 fi
 
 cd "$ROOT_DIR"
-DEVICE_ID="$(./scripts/select-simulator.py "$DEVICE_FAMILY")"
+if [[ -n "${SIMULATOR_UDID:-}" ]]; then
+  DEVICE_ID="$SIMULATOR_UDID"
+  echo "Using requested Simulator $DEVICE_ID" >&2
+else
+  DEVICE_ID="$(./scripts/select-simulator.py "$DEVICE_FAMILY")"
+fi
 
 if [[ ! -d "$WORKSPACE" ]]; then
   CI=1 npx expo prebuild --platform ios
@@ -34,18 +39,20 @@ xcrun simctl boot "$DEVICE_ID" 2>/dev/null || true
 xcrun simctl bootstatus "$DEVICE_ID" -b
 open -a Simulator --args -CurrentDeviceUDID "$DEVICE_ID"
 
-FORCE_BUNDLING=1 RCT_NO_LAUNCH_PACKAGER=1 xcodebuild \
-  -workspace "$WORKSPACE" \
-  -scheme "$SCHEME" \
-  -configuration Release \
-  -destination "platform=iOS Simulator,id=${DEVICE_ID}" \
-  -derivedDataPath "$DERIVED_DATA" \
-  CODE_SIGNING_ALLOWED=NO \
-  build
+if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
+  FORCE_BUNDLING=1 RCT_NO_LAUNCH_PACKAGER=1 xcodebuild \
+    -workspace "$WORKSPACE" \
+    -scheme "$SCHEME" \
+    -configuration Release \
+    -destination "platform=iOS Simulator,id=${DEVICE_ID}" \
+    -derivedDataPath "$DERIVED_DATA" \
+    CODE_SIGNING_ALLOWED=NO \
+    build
+fi
 
 APP_PATH="$(find "$DERIVED_DATA/Build/Products" -path "*iphonesimulator/${SCHEME}.app" -type d | head -1)"
 if [[ -z "$APP_PATH" ]]; then
-  echo "error: ${SCHEME}.app was not produced" >&2
+  echo "error: ${SCHEME}.app was not produced; rerun without SKIP_BUILD=1" >&2
   exit 1
 fi
 

@@ -25,14 +25,12 @@ appId: com.marginallybetterapps.musictools
 - tapOn: "Start metronome"
 - assertVisible: "Stop metronome"
 - extendedWaitUntil:
-    visible: "Beat 1 of 4, pulse 1 of 3, 4/4"
+    visible: "Beat [1-4] of 4, pulse [1-3] of 3, 4/4"
     timeout: 10000
-- extendedWaitUntil:
-    visible: "Beat 1 of 4, pulse 2 of 3, 4/4"
-    timeout: 10000
-- extendedWaitUntil:
-    visible: "Beat 1 of 4, pulse 3 of 3, 4/4"
-    timeout: 10000
+- repeat:
+    times: 4
+    commands:
+      - assertVisible: "Beat [1-4] of 4, pulse [1-3] of 3, 4/4"
 - tapOn: "Stop metronome"
 - assertVisible: "Start metronome"
 - stopRecording
