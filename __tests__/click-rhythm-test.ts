@@ -17,17 +17,9 @@ describe('click rhythms', () => {
     ]);
   });
 
-  test('uses standard SMuFL notation glyphs instead of text abbreviations', () => {
-    expect(CLICK_RHYTHMS.map(({ id, glyph }) => [id, glyph])).toEqual([
-      ['whole', '\uE1D2'],
-      ['half', '\uE1D3'],
-      ['quarter', '\uE1D5'],
-      ['eighth', '\uE1D7'],
-      ['triplet', '\uE1D7'],
-      ['sixteenth', '\uE1D9'],
-    ]);
-    const triplet = CLICK_RHYTHMS.find(({ id }) => id === 'triplet');
-    expect(triplet && 'tupletGlyph' in triplet ? triplet.tupletGlyph : undefined).toBe('\uE883');
+  test('does not expose raw font glyphs as selector artwork', () => {
+    expect(CLICK_RHYTHMS.every((rhythm) => !('glyph' in rhythm))).toBe(true);
+    expect(CLICK_RHYTHMS.every((rhythm) => !('tupletGlyph' in rhythm))).toBe(true);
   });
 
   test.each([
