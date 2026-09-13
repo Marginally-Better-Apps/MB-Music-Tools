@@ -1,7 +1,8 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { Animated, StyleSheet } from 'react-native';
 
 import MetronomeScreen from '@/app/metronome';
+import { BeatPulse } from '@/components/metronome-beat';
 
 jest.mock('@/native/metronome', () => ({
   NativeMetronome: {
@@ -250,6 +251,54 @@ describe('<MetronomeScreen />', () => {
     expect(getByLabelText('Metronome beat').props.accessibilityValue).toEqual({
       text: 'Beat 1 of 4, pulse 3 of 3, 4/4',
     });
+  });
+
+  test('starts every 16th-note beat pulse from a fresh glass ring', async () => {
+    const nativeMetronome = jest.requireMock('@/native/metronome').NativeMetronome;
+    let beatListener:
+      | ((event: { beat: number; phase: number; phaseCount: number }) => void)
+      | undefined;
+    nativeMetronome.addListener.mockImplementation(
+      (
+        _eventName: string,
+        listener: (event: { beat: number; phase: number; phaseCount: number }) => void
+      ) => {
+        beatListener = listener;
+        return { remove: jest.fn() };
+      }
+    );
+    const { getByLabelText, getByTestId } = await render(<MetronomeScreen />);
+
+    await fireEvent(getByTestId('native-click-rhythm-picker'), 'selectionChange', 'sixteenth');
+    await fireEvent.press(getByLabelText('Start metronome'));
+    await act(async () => {
+      beatListener?.({ beat: 1, phase: 4, phaseCount: 4 });
+    });
+
+    await act(async () => {
+      beatListener?.({ beat: 2, phase: 1, phaseCount: 4 });
+    });
+
+    const glassRing = getByTestId('beat-pulse-glass');
+    expect(glassRing.props.glassEffectStyle).toBe('clear');
+    expect(StyleSheet.flatten(glassRing.props.style).borderWidth).toBeUndefined();
+  });
+
+  test('a newly mounted 16th-note pulse begins at resting scale', async () => {
+    const timing = jest.spyOn(Animated, 'timing').mockReturnValue({
+      start: jest.fn(),
+      stop: jest.fn(),
+      reset: jest.fn(),
+    });
+
+    const { getByTestId } = await render(
+      <BeatPulse beatPhase={4} beatPhaseCount={4} intervalMs={125} isDownbeat={false} />
+    );
+
+    expect(StyleSheet.flatten(getByTestId('beat-pulse').props.style).transform).toEqual([
+      { scale: 1 },
+    ]);
+    timing.mockRestore();
   });
 
   test('keeps every resting beat dot and its layout slot exactly consistent', async () => {

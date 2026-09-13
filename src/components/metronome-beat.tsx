@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { GlassView } from 'expo-glass-effect';
 
@@ -18,6 +18,62 @@ type MetronomeBeatProps = {
   timeSignature: TimeSignature;
 };
 
+type BeatPulseProps = {
+  beatPhase: number;
+  beatPhaseCount: number;
+  intervalMs: number;
+  isDownbeat: boolean;
+};
+
+export function BeatPulse({
+  beatPhase,
+  beatPhaseCount,
+  intervalMs,
+  isDownbeat,
+}: BeatPulseProps) {
+  const theme = useTheme();
+  const [pulse] = useState(() => new Animated.Value(0));
+
+  useLayoutEffect(() => {
+    if (beatPhase === 1) pulse.setValue(0);
+    const animation = Animated.timing(pulse, {
+      toValue: beatPhase / beatPhaseCount,
+      duration: Math.min(130, intervalMs * 0.24),
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [beatPhase, beatPhaseCount, intervalMs, pulse]);
+
+  const activeScale = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, isDownbeat ? 1.78 : 1.6],
+  });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.pulse,
+        {
+          shadowColor: theme.accent,
+          shadowOpacity: isDownbeat ? 0.58 : 0.4,
+          shadowRadius: isDownbeat ? 15 : 10,
+          transform: [{ scale: activeScale }],
+        },
+      ]}
+      testID="beat-pulse">
+      <GlassView
+        glassEffectStyle="clear"
+        testID="beat-pulse-glass"
+        tintColor={theme.accentSoft}
+        style={styles.pulseGlass}
+      />
+    </Animated.View>
+  );
+}
+
 export function MetronomeBeat({
   beat,
   beatPhase,
@@ -28,30 +84,7 @@ export function MetronomeBeat({
   timeSignature,
 }: MetronomeBeatProps) {
   const theme = useTheme();
-  const [pulse] = useState(() => new Animated.Value(0));
   const isDownbeat = playing && beat === 1 && beatPhase === 1;
-
-  useEffect(() => {
-    if (!playing || beat === 0) {
-      pulse.setValue(0);
-      return;
-    }
-
-    if (beatPhase === 1) pulse.setValue(0);
-    const animation = Animated.timing(pulse, {
-      toValue: beatPhase / beatPhaseCount,
-      duration: Math.min(130, intervalMs * 0.24),
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    });
-    animation.start();
-    return () => animation.stop();
-  }, [beat, beatPhase, beatPhaseCount, intervalMs, playing, pulse]);
-
-  const activeScale = pulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, isDownbeat ? 1.78 : 1.6],
-  });
 
   const accessibilityValue = !playing
     ? `Stopped, ${timeSignature}`
@@ -76,20 +109,11 @@ export function MetronomeBeat({
           return (
             <View key={dotBeat} style={styles.dotSlot} testID="beat-dot-slot">
               {isActive ? (
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    styles.pulse,
-                    {
-                      backgroundColor: theme.accentSoft,
-                      borderColor: theme.accent,
-                      shadowColor: theme.accent,
-                      shadowOpacity: isDownbeat ? 0.72 : 0.52,
-                      shadowRadius: isDownbeat ? 16 : 11,
-                      transform: [{ scale: activeScale }],
-                    },
-                  ]}
-                  testID="beat-pulse"
+                <BeatPulse
+                  beatPhase={beatPhase}
+                  beatPhaseCount={beatPhaseCount}
+                  intervalMs={intervalMs}
+                  isDownbeat={isDownbeat}
                 />
               ) : null}
               <GlassView
@@ -147,7 +171,11 @@ const styles = StyleSheet.create({
     width: DOT_SIZE,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
-    borderWidth: 2,
     shadowOffset: { width: 0, height: 2 },
+  },
+  pulseGlass: {
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
   },
 });
