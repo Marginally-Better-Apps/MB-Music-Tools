@@ -8,13 +8,17 @@ jest.mock('@/native/metronome', () => ({
     start: jest.fn(),
     stop: jest.fn(),
     setTempo: jest.fn(),
+    setTimeSignature: jest.fn(),
+    setClickRate: jest.fn(),
     addListener: jest.fn(),
   },
 }));
 
 const mockNativeMetronome = jest.requireMock('@/native/metronome').NativeMetronome;
 const mockIsReduceMotionEnabled = jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled');
-let mockNativeBeatListener: ((event: { beat: number }) => void) | undefined;
+let mockNativeBeatListener:
+  | ((event: { beat: number; phase: number; phaseCount: number }) => void)
+  | undefined;
 
 describe('useMetronome', () => {
   beforeEach(() => {
@@ -23,7 +27,10 @@ describe('useMetronome', () => {
     mockIsReduceMotionEnabled.mockResolvedValue(false);
     mockNativeBeatListener = undefined;
     mockNativeMetronome.addListener.mockImplementation(
-      (_eventName: string, listener: (event: { beat: number }) => void) => {
+      (
+        _eventName: string,
+        listener: (event: { beat: number; phase: number; phaseCount: number }) => void
+      ) => {
         mockNativeBeatListener = listener;
         return { remove: jest.fn() };
       }
@@ -40,7 +47,7 @@ describe('useMetronome', () => {
     await act(async () => {
       result.current.toggle();
     });
-    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120);
+    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 1);
 
     await act(async () => {
       result.current.increase();
@@ -61,10 +68,138 @@ describe('useMetronome', () => {
     expect(result.current.beat).toBe(0);
 
     await act(async () => {
-      mockNativeBeatListener?.({ beat: 1 });
+      mockNativeBeatListener?.({ beat: 1, phase: 1, phaseCount: 1 });
     });
 
     expect(result.current.beat).toBe(1);
+    expect(result.current.beatPhase).toBe(1);
+    expect(result.current.beatPhaseCount).toBe(1);
+  });
+
+  test.each([
+    ['2/4', [1, 2, 1, 2]],
+    ['3/4', [1, 2, 3, 1]],
+    ['4/4', [1, 2, 3, 4, 1]],
+    ['6/8', [1, 2, 3, 4, 5, 6, 1]],
+  ] as const)('cycles native ticks through %s', async (signature, expectedBeats) => {
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => {
+      result.current.selectTimeSignature(signature);
+      result.current.toggle();
+    });
+
+    const actualBeats: number[] = [];
+    for (const expectedBeat of expectedBeats) {
+      await act(async () => {
+        mockNativeBeatListener?.({ beat: expectedBeat, phase: 1, phaseCount: 1 });
+      });
+      actualBeats.push(result.current.beat);
+    }
+
+    expect(actualBeats).toEqual(expectedBeats);
+  });
+
+  test('applies a live signature change without starting another clock', async () => {
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => {
+      result.current.toggle();
+      mockNativeBeatListener?.({ beat: 1, phase: 1, phaseCount: 1 });
+      result.current.selectTimeSignature('3/4');
+    });
+
+    expect(result.current.timeSignature).toBe('3/4');
+    expect(result.current.beat).toBe(0);
+    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(3);
+    expect(mockNativeMetronome.start).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      mockNativeBeatListener?.({ beat: 1, phase: 1, phaseCount: 1 });
+    });
+    expect(result.current.beat).toBe(1);
+  });
+
+  test('sends a custom beat count to the native clock', async () => {
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => {
+      result.current.selectTimeSignature('7/8');
+    });
+
+    expect(result.current.timeSignature).toBe('7/8');
+    expect(result.current.beatsPerMeasure).toBe(7);
+    expect(mockNativeMetronome.setTimeSignature).toHaveBeenCalledWith(7);
+  });
+
+  test('keeps the meter denominator separate from the selected click rhythm', async () => {
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => {
+      result.current.selectTimeSignature('4/2');
+      result.current.toggle();
+    });
+    expect(result.current.timeSignature).toBe('4/2');
+    expect(result.current.clickRhythm).toBe('quarter');
+    expect(result.current.intervalMs).toBe(500);
+    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 1);
+  });
+
+  test('holds a triplet beat for three audible phases before the next dot', async () => {
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => {
+      result.current.selectClickRhythm('triplet');
+      result.current.toggle();
+    });
+    expect(result.current.timeSignature).toBe('4/4');
+    expect(result.current.clickRhythm).toBe('triplet');
+    expect(result.current.intervalMs).toBeCloseTo(500 / 3);
+    expect(mockNativeMetronome.setClickRate).toHaveBeenCalledWith(3);
+    expect(mockNativeMetronome.start).toHaveBeenCalledWith(120, 4, 3);
+
+    await act(async () => {
+      mockNativeBeatListener?.({ beat: 1, phase: 1, phaseCount: 3 });
+    });
+    expect(result.current.beat).toBe(1);
+    expect(result.current.beatPhase).toBe(1);
+    expect(result.current.beatPhaseCount).toBe(3);
+
+    await act(async () => {
+      mockNativeBeatListener?.({ beat: 1, phase: 2, phaseCount: 3 });
+    });
+    expect(result.current.beat).toBe(1);
+    expect(result.current.beatPhase).toBe(2);
+
+    await act(async () => {
+      mockNativeBeatListener?.({ beat: 1, phase: 3, phaseCount: 3 });
+    });
+    expect(result.current.beat).toBe(1);
+    expect(result.current.beatPhase).toBe(3);
+
+    await act(async () => {
+      mockNativeBeatListener?.({ beat: 2, phase: 1, phaseCount: 3 });
+    });
+    expect(result.current.beat).toBe(2);
+  });
+
+  test.each([
+    ['whole', 2000, 0.25],
+    ['half', 1000, 0.5],
+    ['quarter', 500, 1],
+    ['eighth', 250, 2],
+    ['triplet', 500 / 3, 3],
+    ['sixteenth', 125, 4],
+  ] as const)('applies %s timing without changing the time signature', async (rhythm, interval, rate) => {
+    const { result } = await renderHook(() => useMetronome());
+
+    await act(async () => {
+      result.current.selectClickRhythm(rhythm);
+    });
+
+    expect(result.current.timeSignature).toBe('4/4');
+    expect(result.current.intervalMs).toBeCloseTo(interval);
+    expect(mockNativeMetronome.setClickRate).toHaveBeenLastCalledWith(rate);
   });
 
   test('commits four steady taps and eases the displayed number to the measured tempo', async () => {

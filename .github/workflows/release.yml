@@ -15,7 +15,7 @@ permissions:
 jobs:
   release:
     name: Build semantic unsigned IPA
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
@@ -52,9 +52,9 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          candidates=(/Applications/Xcode_26*.app /Applications/Xcode_27*.app)
+          candidates=(/Applications/Xcode_26.[4-9]*.app)
           if [[ ${#candidates[@]} -eq 0 ]]; then
-            echo "error: no Xcode 26+ install found" >&2
+            echo "error: no Xcode 26.4+ install found" >&2
             ls -d /Applications/Xcode*.app >&2 || true
             exit 1
           fi

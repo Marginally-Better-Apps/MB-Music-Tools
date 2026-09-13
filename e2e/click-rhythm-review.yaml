@@ -1,0 +1,22 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp
+- repeat:
+    times: 3
+    while:
+      notVisible: "Start metronome"
+    commands:
+      - tapOn:
+          text: "Metronome"
+          retryTapIfNoChange: true
+- assertVisible: "Tempo, 120 BPM"
+- assertVisible: "Whole click rhythm"
+- tapOn: "Whole click rhythm"
+- tapOn: "Half click rhythm"
+- tapOn: "Quarter click rhythm"
+- tapOn: "Eighth click rhythm"
+- tapOn: "16th click rhythm"
+- tapOn: "Triplet click rhythm"
+- assertVisible: "Triplet click rhythm"
+- assertVisible: "Start metronome"
+- takeScreenshot: ${REVIEW_SCREENSHOT}

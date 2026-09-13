@@ -1,122 +1,73 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  GlassView,
-  isGlassEffectAPIAvailable,
-  isLiquidGlassAvailable,
-} from 'expo-glass-effect';
 
+import { AnimatedGlassButton } from '@/components/animated-glass-button';
+import { ClickRhythmPicker } from '@/components/click-rhythm-picker';
 import { MetronomeBeat } from '@/components/metronome-beat';
+import { ScrubbableNumber } from '@/components/scrubbable-number';
+import { TimeSignatureEditor } from '@/components/time-signature-editor';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Fonts, Spacing } from '@/constants/theme';
 import { useMetronome } from '@/hooks/use-metronome';
 import { useTheme } from '@/hooks/use-theme';
 
+const TEMPO_VALUES = Array.from({ length: 271 }, (_, index) => index + 30);
+
 export default function MetronomeScreen() {
   const theme = useTheme();
-  const supportsGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
-  const Surface = supportsGlass ? GlassView : View;
   const metronome = useMetronome();
 
   return (
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.tempoRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Decrease tempo"
-            hitSlop={8}
-            onPress={metronome.decrease}
-            style={styles.stepperHit}>
-            <Surface
-              testID="tempo-stepper-glass"
-              glassEffectStyle="regular"
-              isInteractive={supportsGlass}
-              tintColor={theme.backgroundElement}
-              style={[
-                styles.stepper,
-                { backgroundColor: supportsGlass ? 'transparent' : theme.backgroundElement },
-              ]}>
-              <ThemedText style={styles.stepperLabel}>−</ThemedText>
-            </Surface>
-          </Pressable>
+        <ScrubbableNumber
+          accessibilityLabel={`Tempo, ${metronome.displayBpm} BPM`}
+          displayValue={metronome.displayBpm}
+          onChange={metronome.setTempo}
+          onTap={metronome.tap}
+          style={styles.tempo}
+          textStyle={styles.bpm}
+          value={metronome.bpm}
+          values={TEMPO_VALUES}
+        />
 
-          <ThemedText
-            accessibilityLabel={`${metronome.displayBpm} BPM`}
-            style={styles.bpm}>
-            {metronome.displayBpm}
-          </ThemedText>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Increase tempo"
-            hitSlop={8}
-            onPress={metronome.increase}
-            style={styles.stepperHit}>
-            <Surface
-              testID="tempo-stepper-glass"
-              glassEffectStyle="regular"
-              isInteractive={supportsGlass}
-              tintColor={theme.backgroundElement}
-              style={[
-                styles.stepper,
-                { backgroundColor: supportsGlass ? 'transparent' : theme.backgroundElement },
-              ]}>
-              <ThemedText style={styles.stepperLabel}>+</ThemedText>
-            </Surface>
-          </Pressable>
+        <View style={styles.signatureGroup}>
+          <TimeSignatureEditor
+            onChange={metronome.selectTimeSignature}
+            value={metronome.timeSignature}
+          />
         </View>
 
         <MetronomeBeat
           beat={metronome.beat}
+          beatPhase={metronome.beatPhase}
+          beatPhaseCount={metronome.beatPhaseCount}
+          beatsPerMeasure={metronome.beatsPerMeasure}
           playing={metronome.playing}
           intervalMs={metronome.intervalMs}
+          timeSignature={metronome.timeSignature}
         />
 
         <View style={styles.transportRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Tap tempo"
-            accessibilityHint="Tap four steady beats to set the tempo"
-            onPress={metronome.tap}
-            style={styles.transportHit}>
-            <Surface
-              testID="tap-tempo-glass"
-              glassEffectStyle="regular"
-              isInteractive={supportsGlass}
-              tintColor={theme.backgroundSelected}
-              style={[
-                styles.transportControl,
-                {
-                  backgroundColor: supportsGlass ? 'transparent' : theme.backgroundSelected,
-                },
-              ]}>
-              <ThemedText style={styles.transportLabel}>Tap</ThemedText>
-            </Surface>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
+          <AnimatedGlassButton
             accessibilityLabel={metronome.playing ? 'Stop metronome' : 'Start metronome'}
+            contentStyle={styles.transportControl}
+            glowColor={theme.accent}
             onPress={metronome.toggle}
-            style={styles.transportHit}>
-            <Surface
-              glassEffectStyle="regular"
-              isInteractive={supportsGlass}
-              tintColor={theme.backgroundSelected}
-              style={[
-                styles.transportControl,
-                {
-                  backgroundColor: supportsGlass ? 'transparent' : theme.backgroundSelected,
-                },
-              ]}>
-              <ThemedText style={styles.transportLabel}>
-                {metronome.playing ? 'Stop' : 'Play'}
-              </ThemedText>
-            </Surface>
-          </Pressable>
+            style={styles.transportHit}
+            testID="playback-glass"
+            tintColor={metronome.playing ? theme.accentSoft : theme.backgroundSelected}>
+            <ThemedText style={styles.transportLabel}>
+              {metronome.playing ? 'Stop' : 'Play'}
+            </ThemedText>
+          </AnimatedGlassButton>
         </View>
+
+        <ClickRhythmPicker
+          onChange={metronome.selectClickRhythm}
+          value={metronome.clickRhythm}
+        />
       </SafeAreaView>
     </ThemedView>
   );
@@ -125,50 +76,35 @@ export default function MetronomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    overflow: 'hidden',
   },
   safeArea: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-evenly',
     paddingHorizontal: Spacing.four,
-    gap: Spacing.five,
+    paddingVertical: Spacing.two,
   },
-  tempoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.four,
+  tempo: {
+    minWidth: 240,
   },
   bpm: {
     fontFamily: Fonts.sans,
-    fontSize: 96,
+    fontSize: 104,
     fontWeight: '600',
-    lineHeight: 104,
+    lineHeight: 112,
     letterSpacing: -2,
     minWidth: 180,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },
-  stepper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperHit: {
-    borderRadius: 32,
-  },
-  stepperLabel: {
-    fontSize: 36,
-    fontWeight: '500',
-    lineHeight: 40,
+  signatureGroup: {
+    width: '100%',
+    maxWidth: 420,
   },
   transportRow: {
-    width: '100%',
-    maxWidth: 360,
+    width: 240,
     flexDirection: 'row',
-    gap: Spacing.three,
-    marginTop: Spacing.two,
   },
   transportHit: {
     flex: 1,
@@ -176,7 +112,7 @@ const styles = StyleSheet.create({
   },
   transportControl: {
     width: '100%',
-    minHeight: 88,
+    minHeight: 94,
     paddingHorizontal: Spacing.four,
     borderRadius: 44,
     alignItems: 'center',

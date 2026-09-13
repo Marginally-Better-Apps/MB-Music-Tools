@@ -28,6 +28,10 @@ EOF
 cat > "$TEST_BIN/maestro" <<'EOF'
 #!/usr/bin/env bash
 echo maestro >> "$TEST_LOG"
+if [[ " $* " != *" --device EXACT-DEVICE "* ]]; then
+  echo "maestro did not receive exact device" >&2
+  exit 1
+fi
 
 capture_dir=""
 while [[ $# -gt 0 ]]; do
@@ -48,6 +52,11 @@ EOF
 
 cat > "$TEST_BIN/xcodebuild" <<'EOF'
 #!/usr/bin/env bash
+if [[ " $* " != *"platform=iOS Simulator,id=EXACT-DEVICE"* ]]; then
+  echo "xcodebuild did not receive exact device" >&2
+  exit 1
+fi
+echo build >> "$TEST_LOG"
 mkdir -p "$ROOT_DIR/DerivedData/RecordDemo/Build/Products/Debug-iphonesimulator/MarginallyBetterMusicTools.app"
 exit 0
 EOF
@@ -70,18 +79,35 @@ EOF
 
 chmod +x "$TEST_BIN"/*
 
-PATH="$TEST_BIN:/usr/bin:/bin" \
+SIMULATOR_UDID=EXACT-DEVICE \
+  PATH="$TEST_BIN:/usr/bin:/bin" \
   "$ROOT_DIR/scripts/record-demo.sh" \
   "$ROOT_DIR/e2e/smoke.yaml" \
   "$TEST_VIDEO" \
   iPhone >/dev/null
 
-actual="$(grep -E '^(maestro|terminate|record)$' "$TEST_LOG" | paste -sd ' ' -)"
-expected="maestro"
+actual="$(grep -E '^(build|maestro|terminate|record)$' "$TEST_LOG" | paste -sd ' ' -)"
+expected="build maestro"
 
 if [[ "$actual" != "$expected" ]]; then
   echo "expected: $expected" >&2
   echo "actual:   $actual" >&2
+  exit 1
+fi
+
+: > "$TEST_LOG"
+SKIP_BUILD=1 \
+  SIMULATOR_UDID=EXACT-DEVICE \
+  PATH="$TEST_BIN:/usr/bin:/bin" \
+  "$ROOT_DIR/scripts/record-demo.sh" \
+  "$ROOT_DIR/e2e/smoke.yaml" \
+  "$TEST_VIDEO" \
+  iPhone >/dev/null
+
+warm_actual="$(grep -E '^(build|maestro|terminate|record)$' "$TEST_LOG" | paste -sd ' ' -)"
+if [[ "$warm_actual" != "maestro" ]]; then
+  echo "expected warm run to install and record without rebuilding" >&2
+  echo "actual: $warm_actual" >&2
   exit 1
 fi
 

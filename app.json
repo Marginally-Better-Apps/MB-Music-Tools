@@ -27,6 +27,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-font",
+        {
+          "fonts": ["./assets/fonts/BravuraText.otf"]
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#000000",

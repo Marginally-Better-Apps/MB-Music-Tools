@@ -8,6 +8,18 @@ import {
   DEFAULT_BPM,
   interpolateTempoEaseOut,
 } from '@/lib/tempo';
+import {
+  DEFAULT_TIME_SIGNATURE,
+  getBeatsPerMeasure,
+  TimeSignature,
+} from '@/lib/time-signature';
+import {
+  ClickRhythm,
+  clickIntervalMs,
+  DEFAULT_CLICK_RHYTHM,
+  getBeatPhaseCount,
+  getClickRate,
+} from '@/lib/click-rhythm';
 import { NativeMetronome } from '@/native/metronome';
 
 const TAP_TEMPO_RESET_MS = 2000;
@@ -19,8 +31,14 @@ export function useMetronome() {
   const [displayBpm, setDisplayBpm] = useState(DEFAULT_BPM);
   const [playing, setPlaying] = useState(false);
   const [beat, setBeat] = useState(0);
+  const [beatPhase, setBeatPhase] = useState(0);
+  const [beatPhaseCount, setBeatPhaseCount] = useState(1);
+  const [timeSignature, setTimeSignature] = useState<TimeSignature>(DEFAULT_TIME_SIGNATURE);
+  const [clickRhythm, setClickRhythm] = useState<ClickRhythm>(DEFAULT_CLICK_RHYTHM);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const bpmRef = useRef(bpm);
+  const timeSignatureRef = useRef(timeSignature);
+  const clickRhythmRef = useRef(clickRhythm);
   const displayBpmRef = useRef(displayBpm);
   const tapTimestampsRef = useRef<number[]>([]);
   const animationRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -28,6 +46,8 @@ export function useMetronome() {
   useEffect(() => {
     const beatSubscription = NativeMetronome.addListener('onBeat', (event) => {
       setBeat(event.beat);
+      setBeatPhase(event.phase);
+      setBeatPhaseCount(event.phaseCount);
     });
     return () => {
       beatSubscription.remove();
@@ -99,8 +119,13 @@ export function useMetronome() {
     bpm,
     displayBpm,
     beat,
+    beatPhase,
+    beatPhaseCount,
+    beatsPerMeasure: getBeatsPerMeasure(timeSignature),
     playing,
-    intervalMs: bpmToIntervalMs(bpm),
+    clickRhythm,
+    timeSignature,
+    intervalMs: clickIntervalMs(bpmToIntervalMs(bpm), clickRhythm),
     toggle() {
       setPlaying((current) => {
         if (current) {
@@ -109,9 +134,34 @@ export function useMetronome() {
         }
 
         setBeat(0);
-        NativeMetronome.start(bpmRef.current);
+        setBeatPhase(0);
+        NativeMetronome.start(
+          bpmRef.current,
+          getBeatsPerMeasure(timeSignatureRef.current),
+          getClickRate(clickRhythmRef.current)
+        );
         return true;
       });
+    },
+    selectTimeSignature(signature: TimeSignature) {
+      timeSignatureRef.current = signature;
+      setTimeSignature(signature);
+      setBeat(0);
+      setBeatPhase(0);
+      setBeatPhaseCount(getBeatPhaseCount(clickRhythmRef.current));
+      NativeMetronome.setTimeSignature(getBeatsPerMeasure(signature));
+    },
+    selectClickRhythm(nextRhythm: ClickRhythm) {
+      clickRhythmRef.current = nextRhythm;
+      setClickRhythm(nextRhythm);
+      setBeat(0);
+      setBeatPhase(0);
+      setBeatPhaseCount(getBeatPhaseCount(nextRhythm));
+      NativeMetronome.setClickRate(getClickRate(nextRhythm));
+    },
+    setTempo(nextBpm: number) {
+      tapTimestampsRef.current = [];
+      updateBpm(nextBpm);
     },
     increase() {
       tapTimestampsRef.current = [];
