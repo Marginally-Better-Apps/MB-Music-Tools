@@ -282,6 +282,15 @@ describe('<MetronomeScreen />', () => {
     expect(rhythmIndex).toBeGreaterThan(playIndex);
   });
 
+  test('keeps the six-option click-rhythm pill compact', async () => {
+    const { getByTestId } = await render(<MetronomeScreen />);
+
+    expect(StyleSheet.flatten(getByTestId('click-rhythm-picker').props.style)).toMatchObject({
+      width: '100%',
+      maxWidth: 336,
+    });
+  });
+
   test('removes tempo steppers and Tap so Play is the only bottom control', async () => {
     const { getByTestId, queryByLabelText, queryByText } = await render(<MetronomeScreen />);
 

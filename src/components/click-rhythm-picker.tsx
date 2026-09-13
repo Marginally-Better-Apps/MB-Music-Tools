@@ -89,7 +89,7 @@ export function ClickRhythmPicker({ onChange, value }: ClickRhythmPickerProps) {
 const styles = StyleSheet.create({
   shell: {
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 336,
     height: 56,
   },
   host: {
