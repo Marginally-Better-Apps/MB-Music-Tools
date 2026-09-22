@@ -24,6 +24,8 @@ private final class MetronomeClock {
     interleaved: false
   )!
 
+  var onPlayback: ((Bool) -> Void)?
+  private var observers: [NSObjectProtocol] = []
   private var beatTimer: DispatchSourceTimer?
   private var isPlaying = false
   private var nextBeatDeadline: DispatchTime?
@@ -38,7 +40,17 @@ private final class MetronomeClock {
     audioEngine.attach(player)
     audioEngine.connect(player, to: audioEngine.mainMixerNode, format: format)
     audioEngine.prepare()
+    observers = [
+      NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: nil) { [weak self] note in
+        if note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt == AVAudioSession.InterruptionType.began.rawValue { self?.stop() }
+      },
+      NotificationCenter.default.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: nil) { [weak self] note in
+        if note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { self?.stop() }
+      }
+    ]
   }
+
+  deinit { observers.forEach { NotificationCenter.default.removeObserver($0) } }
 
   func start(
     bpm: Int,
@@ -61,9 +73,9 @@ private final class MetronomeClock {
           try self.audioEngine.start()
         }
         self.beginLoop(bpm: bpm, after: startLeadTime)
+        self.onPlayback?(true)
       } catch {
-        self.isPlaying = false
-        self.onBeat = nil
+        self.stopLocked()
       }
     }
   }
@@ -119,9 +131,7 @@ private final class MetronomeClock {
   }
 
   private func activateAudioSession() throws {
-    let session = AVAudioSession.sharedInstance()
-    try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-    try session.setActive(true)
+    try MusicAudioSession.acquire("metronome")
   }
 
   private func beginLoop(bpm: Int, after delay: TimeInterval) {
@@ -258,16 +268,14 @@ private final class MetronomeClock {
 
   private func stopLocked() {
     isPlaying = false
+    onPlayback?(false)
     nextBeatDeadline = nil
     beatTimer?.cancel()
     beatTimer = nil
     player.stop()
     audioEngine.pause()
     onBeat = nil
-    try? AVAudioSession.sharedInstance().setActive(
-      false,
-      options: .notifyOthersOnDeactivation
-    )
+    MusicAudioSession.release("metronome")
   }
 }
 
@@ -277,7 +285,12 @@ public final class NativeMetronomeModule: Module {
   public func definition() -> ModuleDefinition {
     Name("NativeMetronome")
 
-    Events("onBeat")
+    Events("onBeat", "onPlayback")
+    OnCreate {
+      self.clock.onPlayback = { [weak self] playing in
+        DispatchQueue.main.async { self?.sendEvent("onPlayback", ["playing": playing]) }
+      }
+    }
 
     Function("start") { (bpm: Int, beatsPerMeasure: Int, clickRate: Double) in
       self.clock.start(
@@ -308,8 +321,12 @@ public final class NativeMetronomeModule: Module {
       self.clock.setClickRate(clickRate)
     }
 
-    OnAppEntersBackground {
-      self.clock.stop()
+    Function("readPreferences") { () -> String? in
+      UserDefaults.standard.string(forKey: "music.preferences.v1")
+    }
+
+    Function("writePreferences") { (value: String) in
+      UserDefaults.standard.set(value, forKey: "music.preferences.v1")
     }
 
     OnDestroy {

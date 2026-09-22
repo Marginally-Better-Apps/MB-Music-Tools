@@ -1,0 +1,17 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp:
+    permissions:
+      microphone: deny
+- tapOn: Tuner
+- assertVisible: Microphone access is off
+- assertVisible: Open microphone settings
+- assertVisible:
+    id: tuner-horizon
+- launchApp:
+    permissions:
+      microphone: allow
+- tapOn: Tuner
+- assertNotVisible: Microphone access is off
+- assertVisible:
+    id: tuner-horizon

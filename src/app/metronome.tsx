@@ -1,3 +1,5 @@
+import { SymbolView } from 'expo-symbols';
+import { SettingsSheet } from '@/components/settings-sheet';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -6,7 +8,6 @@ import { ClickRhythmPicker } from '@/components/click-rhythm-picker';
 import { MetronomeBeat } from '@/components/metronome-beat';
 import { ScrubbableNumber } from '@/components/scrubbable-number';
 import { TimeSignatureEditor } from '@/components/time-signature-editor';
-import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Fonts, Spacing } from '@/constants/theme';
 import { useMetronome } from '@/hooks/use-metronome';
@@ -21,6 +22,7 @@ export default function MetronomeScreen() {
   return (
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
+        <SettingsSheet />
         <ScrubbableNumber
           accessibilityLabel={`Tempo, ${metronome.displayBpm} BPM`}
           displayValue={metronome.displayBpm}
@@ -58,9 +60,7 @@ export default function MetronomeScreen() {
             style={styles.transportHit}
             testID="playback-glass"
             tintColor={metronome.playing ? theme.accentSoft : theme.backgroundSelected}>
-            <ThemedText style={styles.transportLabel}>
-              {metronome.playing ? 'Stop' : 'Play'}
-            </ThemedText>
+            <SymbolView name={metronome.playing ? 'stop.fill' : 'play.fill'} tintColor={theme.text} size={32} />
           </AnimatedGlassButton>
         </View>
 
@@ -83,7 +83,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-evenly',
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
+    paddingTop: 56,
+    paddingBottom: Spacing.two,
   },
   tempo: {
     minWidth: 240,

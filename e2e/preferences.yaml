@@ -1,0 +1,21 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp
+- tapOn: Metronome
+- swipe:
+    from:
+      text: 'Tempo, .* BPM'
+    direction: RIGHT
+    duration: 700
+- tapOn: Settings
+- tapOn: Dark appearance
+- tapOn: Close settings
+- stopApp
+- launchApp
+- tapOn: Metronome
+- assertVisible: Start metronome
+- tapOn: Settings
+- assertVisible:
+    text: Dark appearance
+    selected: true
+- tapOn: Close settings

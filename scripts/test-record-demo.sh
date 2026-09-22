@@ -12,7 +12,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$TEST_BIN" "$ROOT_DIR/ios/MarginallyBetterMusicTools.xcworkspace"
+mkdir -p "$TEST_BIN" "$ROOT_DIR/ios/MBMusicTools.xcworkspace"
 export TEST_LOG ROOT_DIR
 
 cat > "$TEST_BIN/java" <<'EOF'
@@ -57,7 +57,7 @@ if [[ " $* " != *"platform=iOS Simulator,id=EXACT-DEVICE"* ]]; then
   exit 1
 fi
 echo build >> "$TEST_LOG"
-mkdir -p "$ROOT_DIR/DerivedData/RecordDemo/Build/Products/Debug-iphonesimulator/MarginallyBetterMusicTools.app"
+mkdir -p "$ROOT_DIR/DerivedData/RecordDemo/Build/Products/Debug-iphonesimulator/MBMusicTools.app"
 exit 0
 EOF
 

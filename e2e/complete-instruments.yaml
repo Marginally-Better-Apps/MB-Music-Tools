@@ -4,13 +4,22 @@ appId: com.marginallybetterapps.musictools
 - tapOn: Tuner
 - assertVisible:
     id: tuner-horizon
-- startRecording: smoke
+- startRecording: complete-instruments
+- tapOn: Settings
+- tapOn: Dark appearance
+- tapOn: Open source
+- assertVisible: Bravura
+- tapOn: Back to settings
+- tapOn: Light appearance
+- tapOn: Close settings
 - tapOn: Metronome
 - assertVisible: Start metronome
 - tapOn: Start metronome
 - assertVisible: Stop metronome
 - tapOn: Stop metronome
+- assertVisible: Start metronome
 - tapOn: Tuner
+- tapOn: B♭
 - assertVisible:
     id: tuner-horizon
 - stopRecording

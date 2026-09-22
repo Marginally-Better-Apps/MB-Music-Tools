@@ -80,6 +80,9 @@ jobs:
           xcodebuild -version
           echo "cache-key=$(xcodebuild -version | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
+      - name: Test native pitch detector
+        run: ./scripts/test-native-audio.sh
+
       - name: Select and boot simulator
         id: simulator
         run: |
@@ -121,8 +124,8 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild build \
-            -workspace ios/MarginallyBetterMusicTools.xcworkspace \
-            -scheme MarginallyBetterMusicTools \
+            -workspace ios/MBMusicTools.xcworkspace \
+            -scheme MBMusicTools \
             -configuration Release \
             -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}" \
             -derivedDataPath DerivedData/CI \
@@ -133,7 +136,7 @@ jobs:
         run: |
           set -euo pipefail
           xcrun simctl bootstatus "${{ steps.simulator.outputs.id }}" -b
-          APP="$(find DerivedData/CI/Build/Products -path '*iphonesimulator/MarginallyBetterMusicTools.app' -type d | head -1)"
+          APP="$(find DerivedData/CI/Build/Products -path '*iphonesimulator/MBMusicTools.app' -type d | head -1)"
           test -n "$APP"
           BUNDLE="$(find "$APP" \( -name '*.jsbundle' -o -name '*.hbc' \) | head -1)"
           test -n "$BUNDLE"
@@ -142,5 +145,5 @@ jobs:
       - name: Verify universal iOS device family
         run: |
           set -euo pipefail
-          FAMILY="$(xcodebuild -workspace ios/MarginallyBetterMusicTools.xcworkspace -scheme MarginallyBetterMusicTools -showBuildSettings | awk -F ' = ' '/TARGETED_DEVICE_FAMILY/{print $2; exit}')"
+          FAMILY="$(xcodebuild -workspace ios/MBMusicTools.xcworkspace -scheme MBMusicTools -showBuildSettings | awk -F ' = ' '/TARGETED_DEVICE_FAMILY/{print $2; exit}')"
           test "$FAMILY" = "1,2"

@@ -1,8 +1,12 @@
+import { defaults, savePreferences } from '@/lib/preferences';
+beforeEach(() => savePreferences(defaults));
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { Animated, StyleSheet } from 'react-native';
 
 import MetronomeScreen from '@/app/metronome';
 import { BeatPulse } from '@/components/metronome-beat';
+
+jest.mock('@/components/settings-sheet', () => ({ SettingsSheet: () => null }));
 
 jest.mock('@/native/metronome', () => ({
   NativeMetronome: {
