@@ -147,3 +147,17 @@ jobs:
           set -euo pipefail
           FAMILY="$(xcodebuild -workspace ios/MBMusicTools.xcworkspace -scheme MBMusicTools -showBuildSettings | awk -F ' = ' '/TARGETED_DEVICE_FAMILY/{print $2; exit}')"
           test "$FAMILY" = "1,2"
+
+      - name: Package simulator app for local acceptance
+        run: |
+          set -euo pipefail
+          APP="$(find DerivedData/CI/Build/Products -path '*iphonesimulator/MBMusicTools.app' -type d | head -1)"
+          mkdir -p artifacts
+          ditto -c -k --sequesterRsrc --keepParent "$APP" artifacts/MBMusicTools-simulator.zip
+
+      - name: Upload simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: MBMusicTools-simulator
+          path: artifacts/MBMusicTools-simulator.zip
+          retention-days: 7

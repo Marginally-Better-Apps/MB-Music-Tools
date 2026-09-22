@@ -11,6 +11,8 @@ description: Sign, upload, and verify MB Music Tools builds in TestFlight using 
 
 Look for `/tmp/tf-drop/meta.json`, a distribution P12, an App Store provisioning profile, and an App Store Connect P8. Metadata uses `p12_password`, `key_id`, `issuer_id`, and `team_id`. The API key may also be installed in `~/.appstoreconnect/private_keys/AuthKey_<key_id>.p8`. Never print the password or key, copy them into the repo, or attach them to a PR.
 
+Use `node .agents/skills/testflight-release/scripts/asc-api.cjs GET '/v1/apps?filter[bundleId]=com.marginallybetterapps.musictools' - /tmp/apps.json` for authenticated requests. The helper reads local metadata or `ASC_KEY_ID`, `ASC_ISSUER_ID`, and optional `ASC_KEY_PATH`. It never prints the JWT. For mutations, pass the method, endpoint, a JSON body file, and an optional result file. A successful 204 has no response body.
+
 Before building, use the API to look up the app by its bundle ID. Team keys require an Issuer ID. Do not misdiagnose a 401 as a missing app. A successful empty app search means the record is absent. Creating app records may require an Admin account.
 
 Validate the inputs:
