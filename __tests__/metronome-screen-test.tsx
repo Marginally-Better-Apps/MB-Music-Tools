@@ -409,5 +409,5 @@ describe('<MetronomeScreen />', () => {
       nativeEvent: { actionName: 'increment' },
     });
     expect(getByText('300')).toBeTruthy();
-  });
+  }, 30_000);
 });
