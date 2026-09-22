@@ -40,3 +40,11 @@ Verify `GET /v1/apps/{appId}/builds` and wait for processing to finish. Resolve 
 Internal testing and external testing are separate states. External distribution needs a beta app localization with description and feedback email, complete beta review contact details including phone, and a beta review submission. Reuse existing contact information; do not invent it. Enable a public join link only for the intended external group when distribution is authorized. Report the actual processing and review states. Apple review may remain pending after an otherwise successful upload.
 
 Document the build number, commit, app ID, processing state, tester link when available, and any remaining Apple review requirement in the PR. Keep account credentials out of that record.
+
+## Reusing a CI-built IPA
+
+When the PR's unsigned IPA has passed CI, it can be signed locally without recompiling the app. Confirm that its source commit matches the intended app code, download it from the public `pr-<number>` release, and extract it with `ditto` so executable permissions survive. Check its bundle ID, embedded JS, native modules, microphone purpose, and background-audio mode before signing.
+
+Assign a new build number in the extracted app's Info.plist. Embed the validated App Store profile. Derive signing entitlements from that profile, specializing any wildcard keychain access group to the app's bundle ID. Reject embedded extensions unless each has its own matching profile. In the temporary keychain described above, sign embedded frameworks and dylibs from the inside out, then sign the app with its entitlements and `--generate-entitlement-der`. Verify with `codesign --verify --deep --strict`. Package the `Payload` directory into an IPA and use the same upload and API verification steps.
+
+An initially quiet `altool` process may be running `swinfo` to inspect the package. Inspect its child process states before restarting. API authentication is supported for uploads, but the current `altool --list-providers` command does not support API-key authentication; use the API helper to verify credentials instead.
