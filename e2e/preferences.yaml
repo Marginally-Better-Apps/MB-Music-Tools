@@ -17,6 +17,9 @@ appId: com.marginallybetterapps.musictools
 - copyTextFrom: 'Beats per measure, .*'
 - evalScript: ${output.meter = maestro.copiedText}
 - tapOn: 'Triplet click rhythm.*'
+- assertVisible:
+    text: 'Triplet click rhythm'
+    selected: true
 - tapOn: Settings
 - tapOn: Dark appearance
 - tapOn: Close settings
@@ -25,7 +28,9 @@ appId: com.marginallybetterapps.musictools
 - tapOn: Metronome
 - assertVisible: ${output.tempo}
 - assertVisible: ${output.meter}
-- assertVisible: 'Triplet click rhythm, selected'
+- assertVisible:
+    text: 'Triplet click rhythm'
+    selected: true
 - assertVisible: Start metronome
 - tapOn: Settings
 - assertVisible:

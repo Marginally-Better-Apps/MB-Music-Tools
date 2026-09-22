@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { SettingsSheet } from '@/components/settings-sheet';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedGlassButton } from '@/components/animated-glass-button';
@@ -23,6 +23,7 @@ export default function MetronomeScreen() {
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
         <SettingsSheet />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <ScrubbableNumber
           accessibilityLabel={`Tempo, ${metronome.displayBpm} BPM`}
           displayValue={metronome.displayBpm}
@@ -68,6 +69,7 @@ export default function MetronomeScreen() {
           onChange={metronome.selectClickRhythm}
           value={metronome.clickRhythm}
         />
+        </ScrollView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -80,6 +82,10 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    width: '100%',
+  },
+  content: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'space-evenly',
     paddingHorizontal: Spacing.four,

@@ -23,6 +23,7 @@ type BeatPulseProps = {
   beatPhaseCount: number;
   intervalMs: number;
   isDownbeat: boolean;
+  size?: number;
 };
 
 export function BeatPulse({
@@ -30,6 +31,7 @@ export function BeatPulse({
   beatPhaseCount,
   intervalMs,
   isDownbeat,
+  size = DOT_SIZE,
 }: BeatPulseProps) {
   const theme = useTheme();
   const [pulse] = useState(() => new Animated.Value(0));
@@ -57,6 +59,7 @@ export function BeatPulse({
       style={[
         styles.pulse,
         {
+          width: size, height: size, borderRadius: size / 2,
           shadowColor: theme.accent,
           shadowOpacity: isDownbeat ? 0.58 : 0.4,
           shadowRadius: isDownbeat ? 15 : 10,
@@ -68,7 +71,7 @@ export function BeatPulse({
         glassEffectStyle="clear"
         testID="beat-pulse-glass"
         tintColor={theme.accentSoft}
-        style={styles.pulseGlass}
+        style={[styles.pulseGlass, { width: size, height: size, borderRadius: size / 2 }]}
       />
     </Animated.View>
   );
@@ -84,6 +87,8 @@ export function MetronomeBeat({
   timeSignature,
 }: MetronomeBeatProps) {
   const theme = useTheme();
+  const compact = beatsPerMeasure > 8;
+  const dotSize = compact ? 20 : DOT_SIZE;
   const isDownbeat = playing && beat === 1 && beatPhase === 1;
 
   const accessibilityValue = !playing
@@ -100,20 +105,21 @@ export function MetronomeBeat({
       accessibilityLabel="Metronome beat"
       accessibilityValue={{ text: accessibilityValue }}
       style={styles.stage}>
-      <View style={styles.dotField}>
+      <View style={[styles.dotField, compact && { gap: 8 }]}>
         {Array.from({ length: beatsPerMeasure }, (_, index) => {
           const dotBeat = index + 1;
           const isActive = playing && beat === dotBeat;
           const isFirst = dotBeat === 1;
 
           return (
-            <View key={dotBeat} style={styles.dotSlot} testID="beat-dot-slot">
+            <View key={dotBeat} style={[styles.dotSlot, compact && { width: 28, height: 28 }]} testID="beat-dot-slot">
               {isActive ? (
                 <BeatPulse
                   beatPhase={beatPhase}
                   beatPhaseCount={beatPhaseCount}
                   intervalMs={intervalMs}
                   isDownbeat={isDownbeat}
+                  size={dotSize}
                 />
               ) : null}
               <GlassView
@@ -125,6 +131,7 @@ export function MetronomeBeat({
                 style={[
                   styles.dot,
                   {
+                    width: dotSize, height: dotSize, borderRadius: dotSize / 2,
                     backgroundColor: 'transparent',
                     borderColor: isFirst || isActive ? theme.accent : theme.textSecondary,
                     borderWidth: isFirst || isActive ? 2 : StyleSheet.hairlineWidth,
