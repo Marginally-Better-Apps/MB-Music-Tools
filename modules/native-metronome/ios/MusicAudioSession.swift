@@ -14,6 +14,8 @@ enum MusicAudioSession {
     if session.category != .playAndRecord {
       try session.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .mixWithOthers, .allowBluetoothHFP])
       try session.setAllowHapticsAndSystemSoundsDuringRecording(true)
+      // A little more render headroom helps dense click patterns on busy phones.
+      try? session.setPreferredIOBufferDuration(0.023)
     }
     try session.setActive(true)
     clients.insert(client)
