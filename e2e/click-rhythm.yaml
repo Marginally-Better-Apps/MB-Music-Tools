@@ -1,6 +1,7 @@
 appId: com.marginallybetterapps.musictools
 ---
-- launchApp
+- launchApp:
+    clearState: true
 - repeat:
     times: 3
     while:
@@ -10,8 +11,7 @@ appId: com.marginallybetterapps.musictools
           text: "Metronome"
           retryTapIfNoChange: true
 - assertVisible: "Tempo, 120 BPM"
-- assertVisible: "Beats per measure, 4"
-- assertVisible: "Note type, quarter note"
+- assertVisible: "4/4 time"
 - assertVisible: "Quarter click rhythm"
 - assertVisible: "Whole click rhythm"
 - assertVisible: "Half click rhythm"
@@ -21,7 +21,7 @@ appId: com.marginallybetterapps.musictools
 - startRecording: click-rhythm-triplet
 - tapOn: "Triplet click rhythm"
 - assertVisible: "Triplet click rhythm"
-- assertVisible: "Note type, quarter note"
+- assertVisible: "4/4 time"
 - tapOn: "Start metronome"
 - assertVisible: "Stop metronome"
 - extendedWaitUntil:

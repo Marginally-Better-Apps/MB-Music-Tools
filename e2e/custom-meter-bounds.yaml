@@ -6,21 +6,26 @@ appId: com.marginallybetterapps.musictools
     text: Allow
     optional: true
 - tapOn: Metronome
-- assertVisible: 'Beats per measure, 4'
-- assertVisible: 'Note type, quarter note'
+- assertVisible: '4/4 time'
+- tapOn: 'Custom time'
+- assertVisible: 'Time Signature'
+- assertVisible: 'Beats per measure'
+- assertVisible: 'Note type'
 - repeat:
     times: 4
     commands:
       - swipe:
           from:
-            text: 'Beats per measure, .*'
-          direction: RIGHT
-          duration: 700
-- swipe:
-    from:
-      text: 'Note type, .*'
-    direction: RIGHT
-    duration: 700
-- assertVisible: 'Beats per measure, 32'
-- assertVisible: 'Note type, thirty-second note'
-- assertVisible: Start metronome
+            text: 'Beats per measure'
+          direction: UP
+          duration: 600
+      - swipe:
+          from:
+            text: 'Note type'
+          direction: UP
+          duration: 600
+- tapOn: Done
+- assertVisible: 'Custom time, 32/32'
+- tapOn: Start metronome
+- assertVisible: Stop metronome
+- tapOn: Stop metronome

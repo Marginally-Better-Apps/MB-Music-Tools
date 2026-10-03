@@ -1,0 +1,67 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    text: Allow
+    optional: true
+- tapOn: Tuner
+- assertVisible:
+    id: tuner-horizon
+- startRecording: redesign-tour
+- assertVisible: "Instrument transposition, Concert"
+- tapOn:
+    id: transposition-picker
+- tapOn: B♭
+- assertVisible: "Instrument transposition, B♭"
+- tapOn:
+    id: transposition-picker
+- tapOn: E♭
+- assertVisible: "Instrument transposition, E♭"
+- tapOn:
+    id: transposition-picker
+- tapOn: Concert
+- assertVisible: "Instrument transposition, Concert"
+- tapOn: Metronome
+- tapOn:
+    text: "Tap tempo"
+    repeat: 4
+    delay: 690
+- waitForAnimationToEnd:
+    timeout: 1000
+- assertNotVisible: "Tempo, 120 BPM"
+- tapOn: "3/4 time"
+- assertVisible:
+    text: "3/4 time"
+    selected: true
+- tapOn: "Custom time"
+- assertVisible: "Time Signature"
+- swipe:
+    from:
+      text: "Beats per measure"
+    direction: UP
+    duration: 1200
+- tapOn: Done
+- assertVisible: "Custom time, [0-9]+/4"
+- tapOn: "Eighth click rhythm"
+- tapOn: "Start metronome"
+- assertVisible: "Stop metronome"
+- extendedWaitUntil:
+    visible: "Beat [0-9]+ of [0-9]+, pulse [1-2] of 2, [0-9]+/4"
+    timeout: 10000
+- tapOn: "Stop metronome"
+- assertVisible: "Start metronome"
+- tapOn: Settings
+- assertVisible: "Appearance"
+- tapOn: Dark appearance
+- tapOn: Acknowledgements
+- assertVisible: "Bravura"
+- tapOn: Settings
+- tapOn: Close settings
+- takeScreenshot: redesign-metronome-dark
+- tapOn: Tuner
+- takeScreenshot: redesign-tuner-dark
+- tapOn: Settings
+- tapOn: System appearance
+- tapOn: Close settings
+- stopRecording

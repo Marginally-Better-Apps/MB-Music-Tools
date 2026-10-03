@@ -49,6 +49,9 @@ const NOTE_ICONS: Record<
   },
 };
 
+/** About 50pt per note: snug around each glyph instead of stretched across the screen. */
+const PICKER_WIDTH = 300;
+
 type ClickRhythmPickerProps = {
   onChange: (rhythm: ClickRhythm) => void;
   value: ClickRhythm;
@@ -63,7 +66,7 @@ export function ClickRhythmPicker({ onChange, value }: ClickRhythmPickerProps) {
       <Host seedColor={theme.accent} style={styles.host}>
         <Picker
           label="Click rhythm"
-          modifiers={[pickerStyle('segmented'), controlSize('large')]}
+          modifiers={[pickerStyle('segmented'), controlSize('large'), frame({ width: PICKER_WIDTH })]}
           onSelectionChange={onChange}
           selection={value}
           testID="native-click-rhythm-picker">
@@ -87,13 +90,14 @@ export function ClickRhythmPicker({ onChange, value }: ClickRhythmPickerProps) {
 }
 
 const styles = StyleSheet.create({
+  // The native control keeps its natural width so the note glyphs are never stretched.
   shell: {
     width: '100%',
-    maxWidth: 336,
     height: 56,
+    alignItems: 'center',
   },
   host: {
-    width: '100%',
+    width: PICKER_WIDTH,
     height: 56,
   },
 });

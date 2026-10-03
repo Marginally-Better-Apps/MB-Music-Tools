@@ -10,9 +10,11 @@ appId: com.marginallybetterapps.musictools
 - startRecording: complete-instruments
 - tapOn: Settings
 - tapOn: Dark appearance
-- tapOn: ".*Open source.*"
-- assertVisible: "Bravura.*"
-- tapOn: Back to settings
+- assertVisible: "Source Code"
+- tapOn: Acknowledgements
+- assertVisible: "Bravura"
+- waitForAnimationToEnd
+- tapOn: Settings
 - tapOn: Light appearance
 - tapOn: Close settings
 - tapOn: Metronome
@@ -22,7 +24,10 @@ appId: com.marginallybetterapps.musictools
 - tapOn: Stop metronome
 - assertVisible: Start metronome
 - tapOn: Tuner
+- tapOn:
+    id: transposition-picker
 - tapOn: B♭
+- assertVisible: "Instrument transposition, B♭"
 - assertVisible:
     id: tuner-horizon
 - stopRecording

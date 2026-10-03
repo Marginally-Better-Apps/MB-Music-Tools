@@ -9,13 +9,7 @@ appId: com.marginallybetterapps.musictools
     duration: 700
 - copyTextFrom: 'Tempo, .* BPM'
 - evalScript: ${output.tempo = maestro.copiedText}
-- swipe:
-    from:
-      text: 'Beats per measure, .*'
-    direction: RIGHT
-    duration: 700
-- copyTextFrom: 'Beats per measure, .*'
-- evalScript: ${output.meter = maestro.copiedText}
+- tapOn: '3/4 time'
 - tapOn: 'Triplet click rhythm.*'
 - assertVisible:
     text: 'Triplet click rhythm'
@@ -27,7 +21,9 @@ appId: com.marginallybetterapps.musictools
 - launchApp
 - tapOn: Metronome
 - assertVisible: ${output.tempo}
-- assertVisible: ${output.meter}
+- assertVisible:
+    text: '3/4 time'
+    selected: true
 - assertVisible:
     text: 'Triplet click rhythm'
     selected: true
