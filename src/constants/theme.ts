@@ -16,6 +16,10 @@ export const Colors = {
     textSecondary: '#60646C',
     accent: '#315BE8',
     accentSoft: '#C9D5FF',
+    success: '#1E9E57',
+    successSoft: '#CDEFD9',
+    tunerOnLock: '#FFFFFF',
+    beatRest: '#D6D8DE',
   },
   dark: {
     text: '#ffffff',
@@ -25,6 +29,10 @@ export const Colors = {
     textSecondary: '#B0B4BA',
     accent: '#88A4FF',
     accentSoft: '#23346E',
+    success: '#4ADE80',
+    successSoft: '#12402A',
+    tunerOnLock: '#000000',
+    beatRest: '#3A3D44',
   },
 } as const;
 

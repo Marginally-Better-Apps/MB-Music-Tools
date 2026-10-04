@@ -1,0 +1,33 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp
+- tapOn:
+    text: Allow
+    optional: true
+- tapOn: Tuner
+- assertVisible:
+    id: tuner-horizon
+- startRecording: complete-instruments
+- tapOn: Settings
+- tapOn: Dark appearance
+- assertVisible: "Source Code"
+- tapOn: Acknowledgements
+- assertVisible: "Bravura"
+- waitForAnimationToEnd
+- tapOn: Settings
+- tapOn: Light appearance
+- tapOn: Close settings
+- tapOn: Metronome
+- assertVisible: Start metronome
+- tapOn: Start metronome
+- assertVisible: Stop metronome
+- tapOn: Stop metronome
+- assertVisible: Start metronome
+- tapOn: Tuner
+- tapOn:
+    id: transposition-picker
+- tapOn: B♭
+- assertVisible: "Instrument transposition, B♭"
+- assertVisible:
+    id: tuner-horizon
+- stopRecording

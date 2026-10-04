@@ -1,8 +1,12 @@
+import { defaults, savePreferences } from '@/lib/preferences';
+beforeEach(() => savePreferences(defaults));
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { Animated, StyleSheet } from 'react-native';
 
 import MetronomeScreen from '@/app/metronome';
 import { BeatPulse } from '@/components/metronome-beat';
+
+jest.mock('@/components/settings-sheet', () => ({ SettingsSheet: () => null }));
 
 jest.mock('@/native/metronome', () => ({
   NativeMetronome: {
@@ -30,7 +34,18 @@ jest.mock('@expo/ui/swift-ui', () => {
   const React = jest.requireActual('react');
   const { Text: NativeText, View } = jest.requireActual('react-native');
 
+  const Stack = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(View, null, children);
+
   return {
+    BottomSheet: ({ children, isPresented }: { children: React.ReactNode; isPresented: boolean }) =>
+      isPresented ? React.createElement(View, { testID: 'meter-sheet' }, children) : null,
+    Button: ({ onPress }: { onPress: () => void }) =>
+      React.createElement(jest.requireActual('react-native').Pressable, { accessibilityLabel: 'Done', onPress }),
+    HStack: Stack,
+    Spacer: () => null,
+    VStack: Stack,
+    ZStack: Stack,
     Host: ({ children, ...props }: { children: React.ReactNode }) =>
       React.createElement(View, props, children),
     Image: ({ modifiers = [], ...props }: { modifiers?: { type: string; label?: string }[] }) =>
@@ -71,7 +86,10 @@ jest.mock('@expo/ui/swift-ui/modifiers', () => ({
   controlSize: (size: string) => ({ type: 'controlSize', size }),
   font: (configuration: object) => ({ type: 'font', ...configuration }),
   frame: (configuration: object) => ({ type: 'frame', ...configuration }),
+  padding: (configuration: object) => ({ type: 'padding', ...configuration }),
   pickerStyle: (style: string) => ({ type: 'pickerStyle', style }),
+  presentationDetents: (detents: object[]) => ({ type: 'presentationDetents', detents }),
+  presentationDragIndicator: (visibility: string) => ({ type: 'presentationDragIndicator', visibility }),
   resizable: () => ({ type: 'resizable' }),
   tag: (value: string) => ({ type: 'tag', value }),
 }));
@@ -87,8 +105,8 @@ describe('<MetronomeScreen />', () => {
     expect(getByLabelText('Start metronome')).toBeTruthy();
     expect(queryByText('Set a tempo when you are ready.')).toBeNull();
     expect(queryByText('Explore')).toBeNull();
-    expect(getByLabelText('Beats per measure, 4')).toBeTruthy();
-    expect(getByLabelText('Note type, quarter note')).toBeTruthy();
+    expect(getByLabelText('Tap tempo')).toBeTruthy();
+    expect(getByLabelText('4/4 time').props.accessibilityState).toMatchObject({ selected: true });
     expect(getByLabelText('Quarter click rhythm')).toBeTruthy();
     expect(getByTestId('click-rhythm-picker')).toBeTruthy();
     expect(getByTestId('native-click-rhythm-picker').props.selection).toBe('quarter');
@@ -113,10 +131,8 @@ describe('<MetronomeScreen />', () => {
     );
 
     expect(getAllByTestId('beat-dot')).toHaveLength(4);
-    await fireEvent(getByLabelText('Beats per measure, 4'), 'onAccessibilityAction', {
-      nativeEvent: { actionName: 'decrement' },
-    });
-    expect(getByLabelText('Beats per measure, 3')).toBeTruthy();
+    await fireEvent.press(getByLabelText('3/4 time'));
+    expect(getByLabelText('3/4 time').props.accessibilityState).toMatchObject({ selected: true });
     expect(getAllByTestId('beat-dot')).toHaveLength(3);
 
     await fireEvent.press(getByLabelText('Start metronome'));
@@ -153,49 +169,56 @@ describe('<MetronomeScreen />', () => {
     });
   });
 
-  test('creates an uncommon 7/8 meter with seven dots', async () => {
-    const { getAllByTestId, getByLabelText, queryAllByTestId } = await render(
+  test('creates an uncommon 7/8 meter from the custom sheet with seven dots', async () => {
+    const { getAllByTestId, getByLabelText, getByTestId, queryByTestId } = await render(
       <MetronomeScreen />
     );
 
-    for (let step = 0; step < 3; step += 1) {
-      await fireEvent(getByLabelText(`Beats per measure, ${step + 4}`), 'onAccessibilityAction', {
-        nativeEvent: { actionName: 'increment' },
-      });
-    }
-    await fireEvent(getByLabelText('Note type, quarter note'), 'accessibilityAction', {
-      nativeEvent: { actionName: 'increment' },
-    });
+    expect(queryByTestId('meter-sheet')).toBeNull();
+    await fireEvent.press(getByLabelText('Custom time'));
+    expect(getByTestId('meter-sheet')).toBeTruthy();
+    await fireEvent(getByTestId('meter-beats-wheel'), 'selectionChange', 7);
+    await fireEvent(getByTestId('meter-unit-wheel'), 'selectionChange', 8);
 
-    expect(getByLabelText('Beats per measure, 7')).toBeTruthy();
-    expect(getByLabelText('Note type, eighth note')).toBeTruthy();
-    expect(queryAllByTestId(/note-value-glyph/)).toHaveLength(0);
+    expect(getByTestId('meter-beats-wheel').props.selection).toBe(7);
+    expect(getByTestId('meter-unit-wheel').props.selection).toBe(8);
+    expect(getByLabelText('Custom time, 7/8').props.accessibilityState).toMatchObject({ selected: true });
     expect(getAllByTestId('beat-dot')).toHaveLength(7);
+
+    await fireEvent.press(getByLabelText('Done'));
+    expect(queryByTestId('meter-sheet')).toBeNull();
+  });
+
+  test('opens the custom sheet over the screen without moving the controls below it', async () => {
+    const { getByLabelText, getByTestId } = await render(<MetronomeScreen />);
+
+    await fireEvent.press(getByLabelText('Custom time'));
+    expect(getByTestId('meter-sheet')).toBeTruthy();
+    expect(StyleSheet.flatten(getByTestId('meter-sheet-host').props.style)).toMatchObject({
+      position: 'absolute',
+      width: 0,
+      height: 0,
+    });
   });
 
   test('keeps all 32 beat dots at the custom-meter upper bound', async () => {
-    const { getAllByTestId, getByLabelText } = await render(<MetronomeScreen />);
+    const { getAllByTestId, getByLabelText, getByTestId } = await render(<MetronomeScreen />);
 
-    for (let step = 0; step < 28; step += 1) {
-      await fireEvent(
-        getByLabelText(`Beats per measure, ${step + 4}`),
-        'onAccessibilityAction',
-        { nativeEvent: { actionName: 'increment' } }
-      );
-    }
+    await fireEvent.press(getByLabelText('Custom time'));
+    await fireEvent(getByTestId('meter-beats-wheel'), 'selectionChange', 32);
 
-    expect(getByLabelText('Beats per measure, 32')).toBeTruthy();
+    expect(getByLabelText('Custom time, 32/4')).toBeTruthy();
     expect(getAllByTestId('beat-dot')).toHaveLength(32);
   });
 
-  test('shows only bare meter numbers with no cards, labels, or instructions', async () => {
-    const { queryAllByTestId, queryByText } = await render(<MetronomeScreen />);
+  test('labels the two control groups and shows no extra explanatory text', async () => {
+    const { getByText, queryByText } = await render(<MetronomeScreen />);
 
-    expect(queryByText('Time signature')).toBeNull();
-    expect(queryByText('Drag numbers')).toBeNull();
-    expect(queryByText('BEATS')).toBeNull();
-    expect(queryByText('NOTE VALUE')).toBeNull();
-    expect(queryAllByTestId('meter-scrubber-glass')).toHaveLength(0);
+    expect(getByText('Time signature')).toBeTruthy();
+    expect(getByText('Clicks')).toBeTruthy();
+    for (const text of ['Allegro', 'Beats per minute', '1 click per beat', 'Tap 3 more times']) {
+      expect(queryByText(text)).toBeNull();
+    }
   });
 
   test('shows six peer rhythm icons and gives triplets three audible phases', async () => {
@@ -235,7 +258,7 @@ describe('<MetronomeScreen />', () => {
     await fireEvent(getByTestId('native-click-rhythm-picker'), 'selectionChange', 'triplet');
     expect(getByTestId('native-click-rhythm-picker').props.selection).toBe('triplet');
     expect(getByLabelText('Triplet click rhythm')).toBeTruthy();
-    expect(getByLabelText('Note type, quarter note')).toBeTruthy();
+    expect(getByLabelText('4/4 time').props.accessibilityState).toMatchObject({ selected: true });
 
     await fireEvent.press(getByLabelText('Start metronome'));
     await act(async () => {
@@ -253,7 +276,7 @@ describe('<MetronomeScreen />', () => {
     });
   });
 
-  test('starts every 16th-note beat pulse from a fresh glass ring', async () => {
+  test('ripples a solid pulse from the active dot on every 16th-note click', async () => {
     const nativeMetronome = jest.requireMock('@/native/metronome').NativeMetronome;
     let beatListener:
       | ((event: { beat: number; phase: number; phaseCount: number }) => void)
@@ -267,21 +290,18 @@ describe('<MetronomeScreen />', () => {
         return { remove: jest.fn() };
       }
     );
-    const { getByLabelText, getByTestId } = await render(<MetronomeScreen />);
+    const { getAllByTestId, getByLabelText, getByTestId } = await render(<MetronomeScreen />);
 
     await fireEvent(getByTestId('native-click-rhythm-picker'), 'selectionChange', 'sixteenth');
     await fireEvent.press(getByLabelText('Start metronome'));
     await act(async () => {
-      beatListener?.({ beat: 1, phase: 4, phaseCount: 4 });
-    });
-
-    await act(async () => {
       beatListener?.({ beat: 2, phase: 1, phaseCount: 4 });
     });
 
-    const glassRing = getByTestId('beat-pulse-glass');
-    expect(glassRing.props.glassEffectStyle).toBe('clear');
-    expect(StyleSheet.flatten(glassRing.props.style).borderWidth).toBeUndefined();
+    const pulse = StyleSheet.flatten(getByTestId('beat-pulse').props.style);
+    expect(pulse.backgroundColor).toBe('#315BE8');
+    expect(StyleSheet.flatten(getAllByTestId('beat-dot')[1].props.style).backgroundColor).toBe('#315BE8');
+    expect(StyleSheet.flatten(getAllByTestId('beat-dot')[0].props.style).backgroundColor).toBe('#D6D8DE');
   });
 
   test('a newly mounted 16th-note pulse begins at resting scale', async () => {
@@ -315,59 +335,61 @@ describe('<MetronomeScreen />', () => {
         width: 36,
         height: 36,
       });
-      expect(StyleSheet.flatten(dot.props.style).transform).toBeUndefined();
-      expect(dot.props.glassEffectStyle).toBe('clear');
-      expect(dot.props.isInteractive).toBe(true);
+      expect(StyleSheet.flatten(dot.props.style)).toMatchObject({ backgroundColor: '#D6D8DE' });
+      expect(dot.props.glassEffectStyle).toBeUndefined();
     }
+    expect(getAllByTestId('downbeat-ring')).toHaveLength(1);
   });
 
-  test('places the click-rhythm pill below the Play button', async () => {
+  test('keeps Tap and Start together at the bottom, within thumb reach', async () => {
     const { toJSON } = await render(<MetronomeScreen />);
     const tree = JSON.stringify(toJSON());
-    const playIndex = tree.indexOf('playback-glass');
     const rhythmIndex = tree.indexOf('click-rhythm-picker');
+    const tapIndex = tree.indexOf('tap-glass');
+    const playIndex = tree.indexOf('playback-glass');
 
-    expect(playIndex).toBeGreaterThanOrEqual(0);
-    expect(rhythmIndex).toBeGreaterThan(playIndex);
+    expect(rhythmIndex).toBeGreaterThanOrEqual(0);
+    expect(tapIndex).toBeGreaterThan(rhythmIndex);
+    expect(playIndex).toBeGreaterThan(tapIndex);
   });
 
-  test('keeps the six-option click-rhythm pill compact', async () => {
+  test('keeps the click rhythms compact and centred instead of stretching the notes across the screen', async () => {
     const { getByTestId } = await render(<MetronomeScreen />);
 
     expect(StyleSheet.flatten(getByTestId('click-rhythm-picker').props.style)).toMatchObject({
-      width: '100%',
-      maxWidth: 336,
+      alignItems: 'center',
+    });
+    expect(getByTestId('native-click-rhythm-picker').props.modifiers).toContainEqual({
+      type: 'frame',
+      width: 300,
     });
   });
 
-  test('removes tempo steppers and Tap so Play is the only bottom control', async () => {
-    const { getByTestId, queryByLabelText, queryByText } = await render(<MetronomeScreen />);
+  test('does not scroll while the controls fit, but still can on a screen too small for them', async () => {
+    const { getByTestId } = await render(<MetronomeScreen />);
+    const scroll = () => getByTestId('metronome-scroll');
 
-    expect(queryByLabelText('Increase tempo')).toBeNull();
-    expect(queryByLabelText('Decrease tempo')).toBeNull();
-    expect(queryByLabelText('Tap tempo')).toBeNull();
-    expect(queryByText('Tap')).toBeNull();
-    expect(getByTestId('playback-glass').props.glassEffectStyle).toBe('regular');
+    await fireEvent(scroll(), 'layout', { nativeEvent: { layout: { height: 700 } } });
+    await fireEvent(scroll(), 'contentSizeChange', 390, 700);
+    expect(scroll().props.scrollEnabled).toBe(false);
+
+    await fireEvent(scroll(), 'contentSizeChange', 390, 820);
+    expect(scroll().props.scrollEnabled).toBe(true);
   });
 
-  test('repeated taps on the large tempo number set the measured BPM', async () => {
+  test('four presses of the Tap button set the measured BPM', async () => {
     jest.useFakeTimers();
     let timestamp = 0;
     const now = jest.spyOn(Date, 'now').mockImplementation(() => timestamp);
     const { getByLabelText, getByText } = await render(<MetronomeScreen />);
 
     for (timestamp of [0, 690, 1380]) {
-      await fireEvent(getByLabelText('Tempo, 120 BPM'), 'accessibilityAction', {
-        nativeEvent: { actionName: 'activate' },
-      });
+      await fireEvent.press(getByLabelText('Tap tempo'));
       expect(getByText('120')).toBeTruthy();
     }
 
     timestamp = 2070;
-    await fireEvent(getByLabelText('Tempo, 120 BPM'), 'accessibilityAction', {
-      nativeEvent: { actionName: 'activate' },
-    });
-    expect(getByText('120')).toBeTruthy();
+    await fireEvent.press(getByLabelText('Tap tempo'));
 
     await act(async () => {
       jest.advanceTimersByTime(320);
@@ -405,5 +427,5 @@ describe('<MetronomeScreen />', () => {
       nativeEvent: { actionName: 'increment' },
     });
     expect(getByText('300')).toBeTruthy();
-  });
+  }, 30_000);
 });

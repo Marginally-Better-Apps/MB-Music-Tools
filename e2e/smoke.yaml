@@ -1,18 +1,19 @@
 appId: com.marginallybetterapps.musictools
 ---
 - launchApp
-- assertVisible: "Play a note when you are ready."
-- assertVisible: "Tuner"
-- assertNotVisible: "Welcome to Expo"
+- tapOn:
+    text: Allow
+    optional: true
+- tapOn: Tuner
+- assertVisible:
+    id: tuner-horizon
 - startRecording: smoke
-- repeat:
-    times: 3
-    while:
-      notVisible: "Start metronome"
-    commands:
-      - tapOn:
-          text: "Metronome"
-          retryTapIfNoChange: true
-- assertVisible: "120 BPM"
-- assertVisible: "Start metronome"
+- tapOn: Metronome
+- assertVisible: Start metronome
+- tapOn: Start metronome
+- assertVisible: Stop metronome
+- tapOn: Stop metronome
+- tapOn: Tuner
+- assertVisible:
+    id: tuner-horizon
 - stopRecording

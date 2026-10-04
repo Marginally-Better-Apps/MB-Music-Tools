@@ -12,7 +12,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$TEST_BIN" "$ROOT_DIR/ios/MarginallyBetterMusicTools.xcworkspace"
+mkdir -p "$TEST_BIN" "$ROOT_DIR/ios/MBMusicTools.xcworkspace"
 export TEST_LOG ROOT_DIR
 
 cat > "$TEST_BIN/java" <<'EOF'
@@ -53,7 +53,7 @@ EOF
 cat > "$TEST_BIN/xcodebuild" <<'EOF'
 #!/usr/bin/env bash
 echo build >> "$TEST_LOG"
-mkdir -p "$ROOT_DIR/DerivedData/Screenshot/Build/Products/Release-iphonesimulator/MarginallyBetterMusicTools.app"
+mkdir -p "$ROOT_DIR/DerivedData/Screenshot/Build/Products/Release-iphonesimulator/MBMusicTools.app"
 exit 0
 EOF
 

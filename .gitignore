@@ -56,3 +56,6 @@ example
 # generated native folders
 /ios
 /android
+
+# Gala Engine runs
+.gala/

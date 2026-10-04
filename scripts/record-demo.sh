@@ -8,8 +8,8 @@ OUTPUT="${2:-artifacts/music-tools-demo.mp4}"
 DEVICE_FAMILY="${3:-iPhone}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DERIVED_DATA="${ROOT_DIR}/DerivedData/RecordDemo"
-WORKSPACE="${ROOT_DIR}/ios/MarginallyBetterMusicTools.xcworkspace"
-SCHEME="MarginallyBetterMusicTools"
+WORKSPACE="${ROOT_DIR}/ios/MBMusicTools.xcworkspace"
+SCHEME="MBMusicTools"
 
 for tool in maestro xcodebuild xcrun; do
   if ! command -v "$tool" >/dev/null 2>&1; then
@@ -44,6 +44,7 @@ if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
     -workspace "$WORKSPACE" \
     -scheme "$SCHEME" \
     -configuration Release \
+    -jobs "${XCODE_JOBS:-2}" \
     -destination "platform=iOS Simulator,id=${DEVICE_ID}" \
     -derivedDataPath "$DERIVED_DATA" \
     CODE_SIGNING_ALLOWED=NO \

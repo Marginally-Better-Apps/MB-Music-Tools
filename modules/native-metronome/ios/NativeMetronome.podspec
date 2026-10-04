@@ -14,6 +14,7 @@ Pod::Spec.new do |s|
   s.dependency 'ExpoModulesCore'
 
   s.source_files = '**/*.swift'
+  s.resource_bundles = { 'NativeMetronome_privacy' => ['PrivacyInfo.xcprivacy'] }
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'SWIFT_COMPILATION_MODE' => 'wholemodule'

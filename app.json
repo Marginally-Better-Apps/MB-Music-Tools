@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Marginally Better Music Tools",
+    "name": "MB Music Tools",
     "slug": "mb-music-tools",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,26 +10,25 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.marginallybetterapps.musictools",
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#000000",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      "supportsTablet": true,
+      "config": {
+        "usesNonExemptEncryption": false
       },
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "The tuner uses your microphone to measure the pitch you play. Audio stays on your iPhone.",
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      }
     },
     "plugins": [
       "expo-router",
       [
         "expo-font",
         {
-          "fonts": ["./assets/fonts/BravuraText.otf"]
+          "fonts": [
+            "./assets/fonts/BravuraText.otf"
+          ]
         }
       ],
       [
@@ -50,6 +49,9 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "platforms": [
+      "ios"
+    ]
   }
 }
