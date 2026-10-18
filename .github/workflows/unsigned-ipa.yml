@@ -78,11 +78,11 @@ jobs:
         run: |
           set -euo pipefail
           RCT_NO_LAUNCH_PACKAGER=1 xcodebuild archive \
-            -workspace ios/MarginallyBetterMusicTools.xcworkspace \
-            -scheme MarginallyBetterMusicTools \
+            -workspace ios/MBMusicTools.xcworkspace \
+            -scheme MBMusicTools \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -archivePath "$PWD/build/MarginallyBetterMusicTools.xcarchive" \
+            -archivePath "$PWD/build/MBMusicTools.xcarchive" \
             -derivedDataPath "$PWD/DerivedData/Archive" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -93,7 +93,7 @@ jobs:
       - name: Package IPA
         run: |
           set -euo pipefail
-          ./scripts/package-ipa.sh build/MarginallyBetterMusicTools.xcarchive artifacts/MB-Music-Tools-unsigned.ipa
+          ./scripts/package-ipa.sh build/MBMusicTools.xcarchive artifacts/MB-Music-Tools-unsigned.ipa
           ./scripts/assert-embedded-bundle.sh artifacts/MB-Music-Tools-unsigned.ipa
 
       - name: Upload unsigned IPA

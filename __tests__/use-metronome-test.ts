@@ -1,3 +1,5 @@
+import { defaults, savePreferences } from '@/lib/preferences';
+beforeEach(() => savePreferences(defaults));
 import { act, renderHook } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
 

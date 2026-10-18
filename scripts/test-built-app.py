@@ -8,7 +8,7 @@ import sys
 
 def main() -> int:
     if len(sys.argv) != 2:
-        print("usage: test-built-app.py <MarginallyBetterMusicTools.app>", file=sys.stderr)
+        print("usage: test-built-app.py <MBMusicTools.app>", file=sys.stderr)
         return 2
 
     app = Path(sys.argv[1])
@@ -30,6 +30,18 @@ def main() -> int:
         print("error: UIDesignRequiresCompatibility opts out of Liquid Glass", file=sys.stderr)
         return 1
 
+    if "audio" not in info.get("UIBackgroundModes", []):
+        print("error: background audio is missing", file=sys.stderr)
+        return 1
+    if not info.get("NSMicrophoneUsageDescription"):
+        print("error: microphone purpose is missing", file=sys.stderr)
+        return 1
+    executable = app / info.get("CFBundleExecutable", "MBMusicTools")
+    binary = executable.read_bytes()
+    for module in (b"NativeMetronome", b"NativeTuner"):
+        if module not in binary:
+            print(f"error: native audio module missing: {module.decode()}", file=sys.stderr)
+            return 1
     print(f"ok {app}")
     return 0
 

@@ -1,0 +1,35 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp
+- tapOn: Metronome
+- swipe:
+    from:
+      text: 'Tempo, .* BPM'
+    direction: RIGHT
+    duration: 700
+- copyTextFrom: 'Tempo, .* BPM'
+- evalScript: ${output.tempo = maestro.copiedText}
+- tapOn: '3/4 time'
+- tapOn: 'Triplet click rhythm.*'
+- assertVisible:
+    text: 'Triplet click rhythm'
+    selected: true
+- tapOn: Settings
+- tapOn: Dark appearance
+- tapOn: Close settings
+- stopApp
+- launchApp
+- tapOn: Metronome
+- assertVisible: ${output.tempo}
+- assertVisible:
+    text: '3/4 time'
+    selected: true
+- assertVisible:
+    text: 'Triplet click rhythm'
+    selected: true
+- assertVisible: Start metronome
+- tapOn: Settings
+- assertVisible:
+    text: Dark appearance
+    selected: true
+- tapOn: Close settings

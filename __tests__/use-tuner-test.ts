@@ -1,0 +1,40 @@
+import { act, renderHook } from '@testing-library/react-native';
+import { AppState, AppStateStatus } from 'react-native';
+import { useTuner } from '@/hooks/use-tuner';
+import { defaults, savePreferences } from '@/lib/preferences';
+import * as Haptics from 'expo-haptics';
+jest.mock('expo-router', () => ({ useFocusEffect: (effect: () => void) => jest.requireActual('react').useEffect(effect, [effect]) }));
+jest.mock('@/native/tuner', () => ({ NativeTuner: { start: jest.fn(async () => 'listening'), stop: jest.fn(), addListener: jest.fn() } }));
+jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn(async () => {}) }));
+const native = jest.requireMock('@/native/tuner').NativeTuner;
+let listeners: Record<string, (event: object) => void>;
+beforeEach(() => {
+  jest.clearAllMocks(); savePreferences(defaults); listeners = {};
+  native.start.mockResolvedValue('listening');
+  native.addListener.mockImplementation((name: string, listener: (event: object) => void) => { listeners[name] = listener; return { remove: jest.fn() }; });
+});
+test('reports a real frequency, transposes it, and ticks only once on lock', async () => {
+  const { result } = await renderHook(() => useTuner());
+  await act(async () => listeners.onPitch({ frequency: 440 }));
+  expect(result.current.pitch).toEqual({ note: 'A4', cents: 0 });
+  expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+  await act(async () => listeners.onPitch({ frequency: 440.1 }));
+  expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+  await act(async () => savePreferences({ transposition: 'bb' }));
+  expect(result.current.pitch?.note).toBe('B4');
+  await act(async () => listeners.onPitch({ frequency: 0 }));
+  expect(result.current.pitch).toBeNull();
+});
+test('denial recovers after returning from Settings and stops on unmount', async () => {
+  let onAppState: ((state: AppStateStatus) => void) | undefined;
+  const subscription = jest.spyOn(AppState, 'addEventListener').mockImplementation((_name, listener) => { onAppState = listener; return { remove: jest.fn() }; });
+  native.start.mockResolvedValueOnce('denied');
+  const { result, unmount } = await renderHook(() => useTuner());
+  expect(result.current.status).toBe('denied');
+  expect(result.current.pitch).toBeNull();
+  await act(async () => onAppState?.('active'));
+  expect(result.current.status).toBe('listening');
+  await unmount();
+  expect(native.stop).toHaveBeenCalled();
+  subscription.mockRestore();
+});

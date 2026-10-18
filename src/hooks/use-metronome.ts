@@ -5,21 +5,19 @@ import {
   bpmToIntervalMs,
   calculateTapTempo,
   clampBpm,
-  DEFAULT_BPM,
   interpolateTempoEaseOut,
 } from '@/lib/tempo';
 import {
-  DEFAULT_TIME_SIGNATURE,
   getBeatsPerMeasure,
   TimeSignature,
 } from '@/lib/time-signature';
 import {
   ClickRhythm,
   clickIntervalMs,
-  DEFAULT_CLICK_RHYTHM,
   getBeatPhaseCount,
   getClickRate,
 } from '@/lib/click-rhythm';
+import { getPreferences, savePreferences } from '@/lib/preferences';
 import { NativeMetronome } from '@/native/metronome';
 
 const TAP_TEMPO_RESET_MS = 2000;
@@ -27,14 +25,14 @@ const TEMPO_ANIMATION_DURATION_MS = 300;
 const TEMPO_ANIMATION_FRAME_MS = 16;
 
 export function useMetronome() {
-  const [bpm, setBpm] = useState(DEFAULT_BPM);
-  const [displayBpm, setDisplayBpm] = useState(DEFAULT_BPM);
+  const [bpm, setBpm] = useState(() => getPreferences().bpm);
+  const [displayBpm, setDisplayBpm] = useState(() => getPreferences().bpm);
   const [playing, setPlaying] = useState(false);
   const [beat, setBeat] = useState(0);
   const [beatPhase, setBeatPhase] = useState(0);
   const [beatPhaseCount, setBeatPhaseCount] = useState(1);
-  const [timeSignature, setTimeSignature] = useState<TimeSignature>(DEFAULT_TIME_SIGNATURE);
-  const [clickRhythm, setClickRhythm] = useState<ClickRhythm>(DEFAULT_CLICK_RHYTHM);
+  const [timeSignature, setTimeSignature] = useState<TimeSignature>(() => getPreferences().timeSignature);
+  const [clickRhythm, setClickRhythm] = useState<ClickRhythm>(() => getPreferences().clickRhythm);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const bpmRef = useRef(bpm);
   const timeSignatureRef = useRef(timeSignature);
@@ -44,6 +42,7 @@ export function useMetronome() {
   const animationRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    const playbackSubscription = NativeMetronome.addListener('onPlayback', event => setPlaying(event.playing));
     const beatSubscription = NativeMetronome.addListener('onBeat', (event) => {
       setBeat(event.beat);
       setBeatPhase(event.phase);
@@ -51,6 +50,7 @@ export function useMetronome() {
     });
     return () => {
       beatSubscription.remove();
+      playbackSubscription.remove();
       NativeMetronome.stop();
       if (animationRef.current) {
         clearInterval(animationRef.current);
@@ -111,6 +111,7 @@ export function useMetronome() {
     const clamped = clampBpm(nextBpm);
     bpmRef.current = clamped;
     setBpm(clamped);
+    savePreferences({ bpm: clamped });
     showBpm(clamped, animated);
     NativeMetronome.setTempo(clamped);
   };
@@ -146,6 +147,7 @@ export function useMetronome() {
     selectTimeSignature(signature: TimeSignature) {
       timeSignatureRef.current = signature;
       setTimeSignature(signature);
+      savePreferences({ timeSignature: signature });
       setBeat(0);
       setBeatPhase(0);
       setBeatPhaseCount(getBeatPhaseCount(clickRhythmRef.current));
@@ -154,6 +156,7 @@ export function useMetronome() {
     selectClickRhythm(nextRhythm: ClickRhythm) {
       clickRhythmRef.current = nextRhythm;
       setClickRhythm(nextRhythm);
+      savePreferences({ clickRhythm: nextRhythm });
       setBeat(0);
       setBeatPhase(0);
       setBeatPhaseCount(getBeatPhaseCount(nextRhythm));

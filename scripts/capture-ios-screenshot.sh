@@ -8,8 +8,8 @@ OUTPUT="${2:-artifacts/ios-review.png}"
 DEVICE_FAMILY="${3:-iPhone}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DERIVED_DATA="${ROOT_DIR}/DerivedData/Screenshot"
-WORKSPACE="${ROOT_DIR}/ios/MarginallyBetterMusicTools.xcworkspace"
-SCHEME="MarginallyBetterMusicTools"
+WORKSPACE="${ROOT_DIR}/ios/MBMusicTools.xcworkspace"
+SCHEME="MBMusicTools"
 
 for tool in maestro xcodebuild xcrun; do
   if ! command -v "$tool" >/dev/null 2>&1; then
