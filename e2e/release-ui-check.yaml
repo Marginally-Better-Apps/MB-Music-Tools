@@ -1,0 +1,62 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp:
+    clearState: true
+    permissions:
+      microphone: allow
+- tapOn:
+    text: Allow
+    optional: true
+- tapOn: Metronome
+- assertVisible: Start metronome
+- assertVisible: Tap tempo
+- waitForAnimationToEnd
+- tapOn: Start metronome
+- assertVisible: Stop metronome
+- tapOn: Stop metronome
+- assertVisible: Start metronome
+- scrollUntilVisible:
+    element: "6/8 time"
+    direction: DOWN
+- tapOn: "6/8 time"
+- swipe:
+    from:
+      id: metronome-scroll
+    direction: UP
+    duration: 600
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: "16th click rhythm"
+    direction: DOWN
+- tapOn: "16th click rhythm"
+- assertVisible:
+    text: "16th click rhythm"
+    selected: true
+- takeScreenshot: small-phone-metronome
+- tapOn: Settings
+- assertVisible: Appearance
+- tapOn: Dark appearance
+- scrollUntilVisible:
+    element: "Privacy Policy"
+    direction: DOWN
+- tapOn: Privacy Policy
+- assertVisible: "(?s)The tuner processes.*"
+- takeScreenshot: small-phone-privacy
+- tapOn: Settings
+- scrollUntilVisible:
+    element: "Open Source Licenses"
+    direction: UP
+- tapOn: Open Source Licenses
+- tapOn: Phosphor Icons
+- assertVisible: "(?s)App icon adapted.*"
+- tapOn: Open Source Licenses
+- tapOn: Settings
+- tapOn: Close settings
+- tapOn: Tuner
+- assertVisible:
+    id: tuner-horizon
+- tapOn:
+    id: transposition-picker
+- tapOn: E♭
+- assertVisible: "Instrument transposition, E♭"
+- takeScreenshot: small-phone-tuner

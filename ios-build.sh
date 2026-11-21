@@ -17,7 +17,7 @@ RCT_NO_LAUNCH_PACKAGER=1 xcodebuild archive -quiet \
   -configuration Release \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE" \
-  -derivedDataPath "$GALA_BUILD_DIR/DerivedData" \
+  -derivedDataPath "$GALA_BUILD_DIR/DerivedData" -packageCachePath "$GALA_BUILD_DIR/SwiftPM" \
   -jobs "${GALA_JOBS:-2}" \
   CODE_SIGNING_ALLOWED=NO \
   CODE_SIGNING_REQUIRED=NO \

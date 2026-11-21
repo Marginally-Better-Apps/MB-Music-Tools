@@ -15,7 +15,7 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "The tuner uses your microphone to measure the pitch you play. Audio stays on your iPhone.",
+        "NSMicrophoneUsageDescription": "The tuner uses your microphone to measure the pitch you play. Audio stays on your device.",
         "UIBackgroundModes": [
           "audio"
         ]

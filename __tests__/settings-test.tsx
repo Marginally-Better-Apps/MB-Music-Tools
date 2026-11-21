@@ -13,6 +13,10 @@ jest.mock('@expo/ui/swift-ui', () => {
   const Toolbar = Object.assign(container, { Content: container });
   return {
     Host: container,
+    VStack: container,
+    HStack: container,
+    Spacer: container,
+    Image: container,
     Form: container,
     List: container,
     ScrollView: container,
@@ -56,7 +60,7 @@ test('opens native settings, changes appearance, and links source code and ackno
   expect(screen.getByTestId('appearance-picker').props.selection).toBe('dark');
 
   expect(screen.getByText('Version')).toBeTruthy();
-  expect(screen.getByText('Source Code').props.href).toBe('https://github.com/Marginally-Better-Apps/MB-Music-Tools');
+  expect(screen.getByText('View on GitHub').props.href).toBe('https://github.com/Marginally-Better-Apps/MB-Music-Tools');
   expect(screen.getByTestId('link-licenses')).toBeTruthy();
   expect(screen.getByText('Bravura')).toBeTruthy();
   expect(screen.getByText('React Native')).toBeTruthy();
@@ -72,5 +76,5 @@ test('builds a license page only when it is pushed', async () => {
   expect(screen.getAllByText('Bravura').length).toBeGreaterThan(1);
 
   await fireEvent.press(screen.getByLabelText('Close settings'));
-  expect(screen.queryByText('Acknowledgements')).toBeNull();
+  expect(screen.queryByText('Open Source Licenses')).toBeNull();
 });

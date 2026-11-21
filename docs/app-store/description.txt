@@ -1,0 +1,9 @@
+MB Music Tools is a free tuner and metronome for band practice.
+
+Tune in concert pitch, or choose B-flat, E-flat, or F to see the written note for your instrument. The tuner shows how far a note is sharp or flat and gives a gentle haptic when you reach the center. It uses A = 440 Hz and processes microphone audio on your device.
+
+Set the metronome from 30 to 300 BPM, tap along to find a tempo, or drag the tempo controls to adjust it. Choose a common time signature or make your own. Whole, half, quarter, eighth, triplet, and sixteenth-note clicks help you work through different rhythms. Playback continues when you lock your screen.
+
+Your tempo, meter, click rhythm, transposition, and appearance settings are remembered between practices. Use automatic, light, or dark appearance on iPhone and iPad.
+
+Every feature is free. There are no ads, subscriptions, in-app purchases, or accounts. The app is open source, and microphone audio is never saved or uploaded.

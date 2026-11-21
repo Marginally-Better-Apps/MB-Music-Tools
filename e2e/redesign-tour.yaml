@@ -54,7 +54,7 @@ appId: com.marginallybetterapps.musictools
 - tapOn: Settings
 - assertVisible: "Appearance"
 - tapOn: Dark appearance
-- tapOn: Acknowledgements
+- tapOn: Open Source Licenses
 - assertVisible: "Bravura"
 - tapOn: Settings
 - tapOn: Close settings

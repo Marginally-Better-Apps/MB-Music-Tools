@@ -1,0 +1,56 @@
+appId: com.marginallybetterapps.musictools
+---
+- launchApp:
+    clearState: true
+    permissions:
+      microphone: allow
+- tapOn: Metronome
+- assertVisible: "Tempo, 120 BPM"
+- tapOn: Settings
+- tapOn: Light appearance
+- tapOn: Close settings
+- assertVisible: Start metronome
+- waitForAnimationToEnd
+- takeScreenshot: 01-metronome-light
+- tapOn: "6/8 time"
+- tapOn: "Triplet click rhythm"
+- tapOn: Start metronome
+- assertVisible: Stop metronome
+- extendedWaitUntil:
+    visible: "Beat [1-6] of 6, pulse [1-3] of 3, 6/8"
+    timeout: 10000
+- takeScreenshot: 02-rhythm-light
+- tapOn: Stop metronome
+- tapOn: Settings
+- assertVisible: "MB Music Tools"
+- assertVisible: "Privacy Policy"
+- waitForAnimationToEnd
+- takeScreenshot: 03-settings-light
+- tapOn: Open Source Licenses
+- tapOn: Phosphor Icons
+- assertVisible: "(?s)App icon adapted.*"
+- waitForAnimationToEnd
+- takeScreenshot: 04-icon-attribution
+- tapOn: Open Source Licenses
+- tapOn: Settings
+- tapOn: Dark appearance
+- tapOn: Close settings
+- tapOn: "4/4 time"
+- tapOn: "Quarter click rhythm"
+- waitForAnimationToEnd
+- takeScreenshot: 05-metronome-dark
+- tapOn: Tuner
+- assertVisible:
+    id: tuner-horizon
+- assertNotVisible: Open microphone settings
+- waitForAnimationToEnd
+- takeScreenshot: 06-tuner-dark
+- tapOn:
+    id: transposition-picker
+- tapOn: B♭
+- assertVisible: "Instrument transposition, B♭"
+- waitForAnimationToEnd
+- takeScreenshot: 07-tuner-bflat-dark
+- tapOn: Settings
+- tapOn: System appearance
+- tapOn: Close settings
